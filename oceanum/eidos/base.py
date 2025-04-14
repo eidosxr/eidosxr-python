@@ -132,17 +132,22 @@ class EidosDatasource(EidosData):
             raise EidosError("Invalid inline data type")
         if dtype == "dataset":
             rename = {v: re.sub(r"[^a-zA-Z0-9_]", "_", v) for v in data.variables}
-            data = data.rename(rename).to_dict()
-            data["coordkeys"] = coordkeys
+            _data = data.rename(rename).to_dict()
             if "t" in coordkeys:  # Sanitize time data to iso8601 strings
-                if coordkeys["t"] in data["coords"]:
-                    data["coords"][coordkeys["t"]]["data"] = [
-                        isotime(x) for x in data["coords"][coordkeys["t"]]["data"]
+                if coordkeys["t"] in _data["coords"]:
+                    _data["coords"][coordkeys["t"]]["data"] = [
+                        isotime(x) for x in _data["coords"][coordkeys["t"]]["data"]
                     ]
-                elif coordkeys["t"] in data["vars"]:
-                    data["vars"][coordkeys["t"]]["data"] = [
-                        isotime(x) for x in data["vars"][coordkeys["t"]]["data"]
+                elif coordkeys["t"] in _data["data_vars"]:
+                    _data["data_vars"][coordkeys["t"]]["data"] = [
+                        isotime(x) for x in _data["data_vars"][coordkeys["t"]]["data"]
                     ]
+            data = {
+                "attributes": _data["attrs"],
+                "dimensions": _data["dims"],
+                "variables": {**_data["data_vars"], **_data["coords"]},
+                "coordkeys": coordkeys,
+            }
         super().__init__(id=id, dataType=dtype, dataSpec=data)
 
 
