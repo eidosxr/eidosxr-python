@@ -78,13 +78,15 @@ class Eidos(EidosSpecification):
         """Return the full EIDOS specification."""
         return self.model_dump()
 
-    def html(self, title=None, renderer=EIDOS_RENDERER):
+    def html(self, title=None, renderer=EIDOS_RENDERER, height="99vh", width="99vw"):
         """Return the EIDOS specification as a displayable HTML page."""
         template = j2_env.get_template("index.j2")
         return template.render(
             spec=self.model_dump_json(),
             title=title or self.name or "EIDOS",
             renderer=renderer,
+            height=height,
+            width=width,
         )
 
     def show(self, renderer=EIDOS_RENDERER):
@@ -120,35 +122,41 @@ class EidosDatasource(EidosData):
         if isinstance(data, GeoDataFrame):
             data = data.__geo_interface__
             data["coordkeys"] = {**coordkeys, "g": "geometry"}
-            dtype = "featureCollection"
+            dstype = "featureCollection"
         elif isinstance(data, DataFrame):
             data = data.to_xarray()
-            dtype = "dataset"
+            dstype = "dataset"
         elif isinstance(data, Dataset):
-            dtype = "dataset"
+            dstype = "dataset"
         elif isinstance(data, Query):
-            dtype = "oceanumDatamesh"
+            dstype = "oceanumDatamesh"
         else:
             raise EidosError("Invalid inline data type")
-        if dtype == "dataset":
+        if dstype == "dataset":
             rename = {v: re.sub(r"[^a-zA-Z0-9_]", "_", v) for v in data.variables}
-            _data = data.rename(rename).to_dict()
-            if "t" in coordkeys:  # Sanitize time data to iso8601 strings
-                if coordkeys["t"] in _data["coords"]:
-                    _data["coords"][coordkeys["t"]]["data"] = [
-                        isotime(x) for x in _data["coords"][coordkeys["t"]]["data"]
-                    ]
-                elif coordkeys["t"] in _data["data_vars"]:
-                    _data["data_vars"][coordkeys["t"]]["data"] = [
-                        isotime(x) for x in _data["data_vars"][coordkeys["t"]]["data"]
-                    ]
+            _data = data.rename(rename)
             data = {
-                "attributes": _data["attrs"],
-                "dimensions": _data["dims"],
-                "variables": {**_data["data_vars"], **_data["coords"]},
+                "attributes": _data.attrs,
+                "dimensions": _data.dims,
                 "coordkeys": coordkeys,
             }
-        super().__init__(id=id, dataType=dtype, dataSpec=data)
+            data["variables"] = {}
+            for v in _data.variables:
+                dtype = str(_data.variables[v].dtype)
+                data["variables"][v] = {
+                    "data": _data.variables[v].to_dict()["data"],
+                    "dimensions": _data.variables[v].dims,
+                    "attributes": _data.variables[v].attrs,
+                    "dtype": "string" if dtype == "object" else dtype,
+                }
+            if "t" in coordkeys:  # Sanitize time data to iso8601 strings
+                if coordkeys["t"] in data["variables"]:
+                    data["variables"][coordkeys["t"]]["data"] = [
+                        isotime(x) for x in data["variables"][coordkeys["t"]]["data"]
+                    ]
+                    data["variables"][coordkeys["t"]]["dtype"] = "string"
+
+        super().__init__(id=id, dataType=dstype, dataSpec=data)
 
 
 class EidosChart(TopLevelSpec):

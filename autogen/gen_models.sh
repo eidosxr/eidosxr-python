@@ -8,27 +8,26 @@ mkdir -p $TMP
 
 cd $TMP
 rm -rf $TMP/*
-mkdir $TMP/core
 mkdir $TMP/node
 mkdir $TMP/node/worldlayer
 
-curl -s $SCHEMAURL/../features.json -o $TMP/features.json
-curl -s $SCHEMAURL/root.json -o $TMP/core/root.json
-curl -s $SCHEMAURL/data.json -o $TMP/core/data.json
-curl -s $SCHEMAURL/state.json -o $TMP/core/state.json
-curl -s $SCHEMAURL/theme.json -o $TMP/core/theme.json
-curl -s $SCHEMAURL/node/plot.json -o $TMP/node/plot.json
-curl -s $SCHEMAURL/node/world.json -o $TMP/node/world.json
-curl -s $SCHEMAURL/node/document.json -o $TMP/node/document.json
+# curl -s $SCHEMAURL/../features.json -o $TMP/features.json
+# curl -s $SCHEMAURL/root.json -o $TMP/core/root.json
+# curl -s $SCHEMAURL/data.json -o $TMP/core/data.json
+# curl -s $SCHEMAURL/state.json -o $TMP/core/state.json
+# curl -s $SCHEMAURL/theme.json -o $TMP/core/theme.json
+# curl -s $SCHEMAURL/node/plot.json -o $TMP/node/plot.json
+# curl -s $SCHEMAURL/node/world.json -o $TMP/node/world.json
+# curl -s $SCHEMAURL/node/document.json -o $TMP/node/document.json
 
-for layer in feature gridded label scenegraph sea-surface track ; do
-    curl -s $SCHEMAURL/node/worldlayer/$layer.json -o $TMP/node/worldlayer/$layer.json
-done
+# for layer in feature gridded label scenegraph sea-surface track ; do
+#     curl -s $SCHEMAURL/node/worldlayer/$layer.json -o $TMP/node/worldlayer/$layer.json
+# done
 
-#cp -RL $ROOTDIR/../../packages/schemas/src/eidos/* $TMP
+cp -RL $ROOTDIR/../../packages/schemas/src/eidos/* $TMP
 
 # Extract version from root schema in TMP directory
-VERSION=$(grep -o '"const": "[^"]*"' "$TMP/core/root.json" | head -1 | cut -d'"' -f4)
+VERSION=$(grep -o '"const": "[^"]*"' "$TMP/root.json" | head -1 | cut -d'"' -f4)
 echo "Extracted version from schema: $VERSION"
 
 # Create version file
