@@ -60,7 +60,8 @@ class EidosModel(BaseModel):
                 if isinstance(value, list):
                     value = ListProxy(value)
                 self._set_as_parent(value)
-                self.__dict__[name] = value
+                if value is not None:
+                    self.__dict__[name] = value
         self._change()
 
     def _set_as_parent(self, value):

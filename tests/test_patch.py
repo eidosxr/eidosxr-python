@@ -11,15 +11,15 @@ def basic_spec():
         nodeSpec=doc,
     )
     eidos = Eidos(
-        id="test", name="test", description="I am an EIDOS spec", data=[], rootNode=node
+        id="test", name="test", description="I am an EIDOS spec", data=[], root=node
     )
     return eidos
 
 
 def test_basic_patch(basic_spec):
     eidos = basic_spec
-    eidos.rootNode.nodeSpec.style = "test"
-    eidos.rootNode.id = "new_name"
+    eidos.root.nodeSpec.style = "test"
+    eidos.root.id = "new_name"
     del eidos.description
     patch = eidos.diff()
     assert patch is not None

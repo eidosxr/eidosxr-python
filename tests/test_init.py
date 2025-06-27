@@ -11,7 +11,7 @@ def basic_spec():
         nodeSpec=doc,
     )
     eidos = Eidos(
-        id="test", name="test", description="I am an EIDOS spec", data=[], rootNode=node
+        id="test", name="test", description="I am an EIDOS spec", data=[], root=node
     )
     return eidos
 
@@ -24,11 +24,11 @@ def test_basic_init(basic_spec):
 
 def test_basic_change(basic_spec):
     eidos = basic_spec
-    eidos.rootNode.nodeSpec.style = "test"
-    eidos.rootNode.id = "new_name"
+    eidos.root.nodeSpec.style = "test"
+    eidos.root.id = "new_name"
     del eidos.description
     assert not hasattr(eidos, "description")
-    assert eidos.dict()["rootNode"]["id"] == "new_name"
+    assert eidos.dict()["root"]["id"] == "new_name"
 
 
 def test_html(basic_spec):
@@ -48,11 +48,11 @@ def test_json():
         "id": "test",
         "name": "test",
         "data": [],
-        "rootNode": {
+        "root": {
             "id": "test",
             "nodeType": "document",
             "nodeSpec": {"content": "This is a test document node"},
         },
     }
     eidos = Eidos.from_dict(json)
-    assert eidos.rootNode.id == "test"
+    assert eidos.root.id == "test"

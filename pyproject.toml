@@ -15,7 +15,8 @@ dependencies = [
     "geopandas",
     "xarray",
     "altair",
-    "jinja2"
+    "jinja2",
+    "jsonpatch"
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -35,6 +36,9 @@ dynamic = ['version']
 
 [tool.setuptools.dynamic]
 version = {attr = 'oceanum.eidos.version.__version__'}
+
+[tool.setuptools]
+license-files = []
 
 [project.urls]
 'Homepage' = 'https://oceanum.io'

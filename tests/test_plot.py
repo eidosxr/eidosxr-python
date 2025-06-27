@@ -43,7 +43,7 @@ def basic_spec():
         nodeSpec=plot,
     )
     eidos = Eidos(
-        id="test", name="test", description="I am an EIDOS spec", data=[], rootNode=node
+        id="test", name="test", description="I am an EIDOS spec", data=[], root=node
     )
     return eidos
 
@@ -56,17 +56,17 @@ def test_basic_init(basic_spec):
 
 def test_basic_change(basic_spec):
     eidos = basic_spec
-    eidos.rootNode.nodeSpec.width = 800
-    eidos.rootNode.id = "new_name"
+    eidos.root.nodeSpec.width = 800
+    eidos.root.id = "new_name"
     del eidos.description
     assert not hasattr(eidos, "description")
-    assert eidos.dict()["rootNode"]["id"] == "new_name"
+    assert eidos.dict()["root"]["id"] == "new_name"
 
 
 def test_change_fail(basic_spec):
     eidos = basic_spec
     with pytest.raises(EidosSpecError):
-        eidos.rootNode.nodeSpec.plotSpec = {"data": "not a valid vega spec"}
+        eidos.root.nodeSpec.plotSpec = {"data": "not a valid vega spec"}
 
 
 def test_named_data(basic_spec, data):
@@ -80,7 +80,7 @@ def test_named_data(basic_spec, data):
             color=alt.Color(field="value2", type="quantitative"),
         )
     )
-    basic_spec.rootNode.nodeSpec.plotSpec = chart
+    basic_spec.root.nodeSpec.plotSpec = chart
     assert basic_spec.show()
 
 

@@ -82,7 +82,7 @@ class Eidos(EidosSpecification):
         """Return the EIDOS specification as a displayable HTML page."""
         template = j2_env.get_template("index.j2")
         return template.render(
-            spec=self.model_dump_json(),
+            spec=self.model_dump_json(exclude_none=True),
             title=title or self.name or "EIDOS",
             renderer=renderer,
             height=height,
@@ -122,7 +122,7 @@ class EidosDatasource(EidosData):
         if isinstance(data, GeoDataFrame):
             data = data.__geo_interface__
             data["coordkeys"] = {**coordkeys, "g": "geometry"}
-            dstype = "featureCollection"
+            dstype = "geojson"
         elif isinstance(data, DataFrame):
             data = data.to_xarray()
             dstype = "dataset"
@@ -137,17 +137,25 @@ class EidosDatasource(EidosData):
             _data = data.rename(rename)
             data = {
                 "attributes": _data.attrs,
-                "dimensions": _data.dims,
+                "dimensions": dict(_data.sizes),
                 "coordkeys": coordkeys,
             }
             data["variables"] = {}
             for v in _data.variables:
                 dtype = str(_data.variables[v].dtype)
+                values = _data.variables[v].to_dict()["data"]
+                if dtype == "object":
+                    if len(_data.variables[v].dims) > 1:
+                        raise EidosError(
+                            "Multi-dimensional object variables not supported"
+                        )
+                    values = [str(x) for x in values]
+                    dtype = "string"
                 data["variables"][v] = {
-                    "data": _data.variables[v].to_dict()["data"],
+                    "data": values,
                     "dimensions": _data.variables[v].dims,
                     "attributes": _data.variables[v].attrs,
-                    "dtype": "string" if dtype == "object" else dtype,
+                    "dtype": dtype,
                 }
             if "t" in coordkeys:  # Sanitize time data to iso8601 strings
                 if coordkeys["t"] in data["variables"]:
