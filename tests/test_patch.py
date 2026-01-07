@@ -1,24 +1,18 @@
 import pytest
-from eidos import Eidos, Node, DocumentView, Particles
+from oceanum.eidos import Eidos, Document
 
 
 @pytest.fixture
 def basic_spec():
-    doc = DocumentView(content="test")
-    node = Node(
-        id="test",
-        nodeType="document",
-        nodeSpec=doc,
-    )
+    root_node = Document(id="test", content="test")
     eidos = Eidos(
-        id="test", name="test", description="I am an EIDOS spec", data=[], root=node
+        id="test", name="test", description="I am an EIDOS spec", data=[], root=root_node
     )
     return eidos
 
 
 def test_basic_patch(basic_spec):
     eidos = basic_spec
-    eidos.root.nodeSpec.style = "test"
     eidos.root.id = "new_name"
     del eidos.description
     patch = eidos.diff()

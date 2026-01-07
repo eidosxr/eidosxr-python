@@ -1,5 +1,5 @@
 import copy
-from pydantic import BaseModel, ConfigDict, ValidationError
+from pydantic import BaseModel, ConfigDict, ValidationError, model_validator
 from typing import TYPE_CHECKING
 
 from .exceptions import EidosSpecError
@@ -52,10 +52,10 @@ class EidosModel(BaseModel):
     )
     _parent = None
 
-    def __init__(self, **data):
-        self.__pydantic_validator__.validate_python(data, self_instance=self)
-        for name, _ in data.items():
-            if not name.startswith("_") and name in self.model_fields:
+    @model_validator(mode="after")
+    def attach_parent(self):
+        for name, _ in self.model_fields.items():
+            if not name.startswith("_"):
                 value = self.__dict__[name]
                 if isinstance(value, list):
                     value = ListProxy(value)
@@ -63,6 +63,7 @@ class EidosModel(BaseModel):
                 if value is not None:
                     self.__dict__[name] = value
         self._change()
+        return self
 
     def _set_as_parent(self, value):
         if value is None:

@@ -1,4 +1,2 @@
-import os
-import sys
-
-sys.path.append(os.path.join(os.path.dirname(__file__), "..", "oceanum"))
+# Tests run against the installed oceanum.eidos package
+# Install in development mode: pip install -e .

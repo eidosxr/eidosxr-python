@@ -4,11 +4,9 @@ import altair as alt
 import pandas as pd
 import numpy as np
 
-from eidos import (
+from oceanum.eidos import (
     Eidos,
-    Node,
-    PlotView,
-    TopLevelSpec,
+    Plot,
     EidosSpecError,
     EidosChart,
     EidosDatasource,
@@ -36,14 +34,9 @@ def basic_spec():
             color="Origin",
         )
     )
-    plot = PlotView(plotSpec=EidosChart(chart))
-    node = Node(
-        id="test",
-        nodeType="plot",
-        nodeSpec=plot,
-    )
+    root_node = Plot(id="test", plotSpec=EidosChart(chart))
     eidos = Eidos(
-        id="test", name="test", description="I am an EIDOS spec", data=[], root=node
+        id="test", name="test", description="I am an EIDOS spec", data=[], root=root_node
     )
     return eidos
 
@@ -56,17 +49,17 @@ def test_basic_init(basic_spec):
 
 def test_basic_change(basic_spec):
     eidos = basic_spec
-    eidos.root.nodeSpec.width = 800
+    eidos.root.width = 800
     eidos.root.id = "new_name"
     del eidos.description
     assert not hasattr(eidos, "description")
-    assert eidos.dict()["root"]["id"] == "new_name"
+    assert eidos.model_dump()["root"]["id"] == "new_name"
 
 
 def test_change_fail(basic_spec):
     eidos = basic_spec
     with pytest.raises(EidosSpecError):
-        eidos.root.nodeSpec.plotSpec = {"data": "not a valid vega spec"}
+        eidos.root.plotSpec = {"data": "not a valid vega spec"}
 
 
 def test_named_data(basic_spec, data):
@@ -80,7 +73,7 @@ def test_named_data(basic_spec, data):
             color=alt.Color(field="value2", type="quantitative"),
         )
     )
-    basic_spec.root.nodeSpec.plotSpec = chart
+    basic_spec.root.plotSpec = chart
     assert basic_spec.show()
 
 

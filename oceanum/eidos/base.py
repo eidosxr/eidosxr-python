@@ -17,8 +17,11 @@ from .root import EidosSpecification
 from .data import EidosData
 from .vegaspec import TopLevelSpec
 from .exceptions import EidosError
+from . import version
 
-EIDOS_RENDERER = os.environ.get("EIDOS_RENDERER", "https://render.eidos.oceanum.io")
+EIDOS_RENDERER = os.environ.get(
+    "EIDOS_RENDERER", f"https://render.eidos.oceanum.io/v{version.__version__}"
+)
 TEMPLATES_PATH = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), "./_templates/"
 )

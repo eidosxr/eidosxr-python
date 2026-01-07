@@ -1,17 +1,12 @@
 import pytest
-from eidos import Eidos, Node, DocumentView
+from oceanum.eidos import Eidos, Document
 
 
 @pytest.fixture
 def basic_spec():
-    doc = DocumentView(content="This is a test document node")
-    node = Node(
-        id="test",
-        nodeType="document",
-        nodeSpec=doc,
-    )
+    root_node = Document(id="test", content="This is a test document node")
     eidos = Eidos(
-        id="test", name="test", description="I am an EIDOS spec", data=[], root=node
+        id="test", name="test", description="I am an EIDOS spec", data=[], root=root_node
     )
     return eidos
 
@@ -24,11 +19,10 @@ def test_basic_init(basic_spec):
 
 def test_basic_change(basic_spec):
     eidos = basic_spec
-    eidos.root.nodeSpec.style = "test"
     eidos.root.id = "new_name"
     del eidos.description
     assert not hasattr(eidos, "description")
-    assert eidos.dict()["root"]["id"] == "new_name"
+    assert eidos.model_dump()["root"]["id"] == "new_name"
 
 
 def test_html(basic_spec):
@@ -44,15 +38,14 @@ def test_show(basic_spec):
 
 
 def test_json():
-    json = {
+    json_spec = {
         "id": "test",
         "name": "test",
         "data": [],
         "root": {
             "id": "test",
-            "nodeType": "document",
-            "nodeSpec": {"content": "This is a test document node"},
+            "content": "This is a test document node",
         },
     }
-    eidos = Eidos.from_dict(json)
+    eidos = Eidos.from_dict(json_spec)
     assert eidos.root.id == "test"
