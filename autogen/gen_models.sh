@@ -27,9 +27,9 @@ done
 
 cp -RL $ROOTDIR/../../packages/schemas/src/eidos/* $TMP
 
-# Extract version from root schema in TMP directory
-VERSION=$(grep -o '"const": "[^"]*"' "$TMP/root.json" | head -1 | cut -d'"' -f4)
-echo "Extracted version from schema: $VERSION"
+# Extract version from npm package.json
+VERSION=$(node -p "require('$ROOTDIR/../../package.json').version")
+echo "Extracted version from npm package: $VERSION"
 
 # Create version file
 echo "# Auto-generated file - DO NOT EDIT
@@ -64,6 +64,27 @@ perl -p -i -e "s|menu.json|document.json|g" $TMP/node/grid.json
 datamodel-codegen --input-file-type jsonschema --input $TMP --output $ROOTDIR/oceanum/eidos/ --output-model-type pydantic_v2.BaseModel --base-class=oceanum.eidos._basemodel.EidosModel --use-subclass-enum --use-schema-description --use-field-description
 
 python $ROOTDIR/autogen/gen_init.py
+
+# Fix circular import: world.py imports panel, but panel.py imports world (via node/__init__.py).
+# Remove the panel import from world.py and defer all model_rebuild() calls that transitively
+# reference panel.EidosPanel (World, Grid, Menu) to panel.py, where panel is fully defined.
+WORLD_PY=$ROOTDIR/oceanum/eidos/node/world.py
+GRID_PY=$ROOTDIR/oceanum/eidos/node/grid.py
+MENU_PY=$ROOTDIR/oceanum/eidos/node/menu.py
+PANEL_PY=$ROOTDIR/oceanum/eidos/panel.py
+
+# Remove `panel` from world.py's import and its model_rebuild() call
+perl -p -i -e "s|from \.\. import common, panel|from .. import common|g" $WORLD_PY
+perl -p -i -e "s|^World\.model_rebuild\(\)$|# model_rebuild() called in panel.py after EidosPanel is defined to break circular import|g" $WORLD_PY
+
+# Defer Grid.model_rebuild() - Grid references World which references panel.EidosPanel
+perl -p -i -e "s|^Grid\.model_rebuild\(\)$|# model_rebuild() called in panel.py after EidosPanel is defined to break circular import|g" $GRID_PY
+
+# Defer Menu.model_rebuild() - Menu references World which references panel.EidosPanel
+perl -p -i -e "s|^Menu\.model_rebuild\(\)$|# model_rebuild() called in panel.py after EidosPanel is defined to break circular import|g" $MENU_PY
+
+# In panel.py, rebuild deferred models with panel in the types namespace
+perl -p -i -e "s|^EidosPanel\.model_rebuild\(\)$|import sys as _sys\n_panel_ns = {\"panel\": _sys.modules[__name__]}\nworld.World.model_rebuild(_types_namespace=_panel_ns)\ngrid.Grid.model_rebuild(_types_namespace=_panel_ns)\nmenu.Menu.model_rebuild(_types_namespace=_panel_ns)\nEidosPanel.model_rebuild()|g" $PANEL_PY
 
 #vegaspec is a special case - copy Altair wrapper to vegaspec.py
 cp $ROOTDIR/autogen/_vegaspec.py $ROOTDIR/oceanum/eidos/vegaspec.py

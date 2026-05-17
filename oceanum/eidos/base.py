@@ -20,7 +20,7 @@ from .exceptions import EidosError
 from . import version
 
 EIDOS_RENDERER = os.environ.get(
-    "EIDOS_RENDERER", f"https://render.eidos.oceanum.io/v{version.__version__}"
+    "EIDOS_RENDERER", f"https://render.eidos.oceanum.io/v{version.__version__.split('.')[0]}.{version.__version__.split('.')[1]}"
 )
 TEMPLATES_PATH = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), "./_templates/"
@@ -172,7 +172,7 @@ class EidosDatasource(EidosData):
 
 class EidosChart(TopLevelSpec):
     """Convenience class to create :class:`eidos.TopLevelSpec` for a :class:`eidos.PlotView` node from Altair Chart. Use this object for the plotSpec field.
-    To use one of the defined EIDOS datasources in the Altair Chart, use a :class:`altair.NamedData` object with the id of the :class:`eidos.Datasource`.
+    To use one of the defined EIDOS datasources in the Altair Chart, use a :class:`altair.NamedData` object with the id of the :class:`eidos.Datasource` as the Altair.Chart constructor data arg.
 
     Args:
         chart (altair.Chart): The Altair Chart to be used for the plot.
