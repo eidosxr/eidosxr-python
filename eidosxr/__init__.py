@@ -14,4 +14,5 @@ from .common import *
 from .theme import *
 from .data import *
 from .apimodels import *
+from .consistency import *
 from .client import *

@@ -41,7 +41,11 @@ from .apimodels import (
     Template,
 )
 from .base import Eidos
-from .exceptions import EidosError, error_from_response
+from .consistency import (
+    compare_stores,
+    load_consolidated_metadata,
+)
+from .exceptions import EidosError, NotFound, error_from_response
 
 DEFAULT_SERVICE = "https://api.eidosxr.com"
 
@@ -474,6 +478,50 @@ class EidosConnection:
         """Download an asset's bytes."""
         response = self._request("GET", self._ingestion_url(f"/api/assets/{asset_id}"))
         return response.content
+
+    # -- consistency -----------------------------------------------------
+    def check_put_consistency(
+        self,
+        dataset_id: str,
+        store: Mapping[str, bytes],
+        *,
+        mode: str = "replace",
+        append_dim: Optional[str] = None,
+    ) -> None:
+        """Verify a zarr ``store`` is consistent with an existing dataset for the
+        intended write verb, before uploading it.
+
+        Args:
+            dataset_id: the existing (completed) dataset to check against.
+            store: the zarr store to write, as a mapping of ``key -> bytes``.
+            mode: ``"replace"`` (PUT — coordinate structure must match exactly),
+                ``"append"`` (PATCH — the ``append_dim`` coordinate must extend
+                the existing axis monotonically and without overlap; other
+                coordinates must match), or ``"clobber"`` (POST — no check).
+            append_dim: the dimension being appended (required for ``append``).
+
+        Raises:
+            ConsistencyError: if the store is incompatible for ``mode``.
+        """
+        if mode == "clobber":
+            return
+
+        def existing_get(path: str) -> Optional[bytes]:
+            try:
+                return self.get_zarr_object(dataset_id, path)
+            except NotFound:
+                return None
+
+        existing_meta = load_consolidated_metadata(existing_get)
+        new_meta = load_consolidated_metadata(store.get)
+        compare_stores(
+            existing_meta,
+            new_meta,
+            existing_get,
+            store.get,
+            mode=mode,
+            append_dim=append_dim,
+        )
 
 
 __all__ = ["EidosConnection", "ZARR_OBJECT_MAX_BYTES"]
