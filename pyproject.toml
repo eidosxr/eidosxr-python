@@ -50,7 +50,8 @@ version = {attr = 'eidosxr.version.__version__'}
 license-files = []
 
 [project.urls]
-'Homepage' = 'https://oceanum.io'
+'Homepage' = 'https://github.com/eidosxr/eidosxr-python'
+'Repository' = 'https://github.com/eidosxr/eidosxr-python'
 
 [project.optional-dependencies]
 test=[
