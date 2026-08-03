@@ -1,11 +1,12 @@
 import os
 
 ROOTDIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "eidosxr")
+SPECDIR = os.path.join(ROOTDIR, "spec")
 
 
 def write_init(curdir):
     with open(os.path.join(curdir, "__init__.py"), "w") as f:
-        for name in os.listdir(curdir):
+        for name in sorted(os.listdir(curdir)):
             if (
                 not name.startswith("_")
                 and not name.startswith(".")
@@ -15,7 +16,7 @@ def write_init(curdir):
 
 
 def walk(curdir):
-    for name in os.listdir(curdir):
+    for name in sorted(os.listdir(curdir)):
         if name.startswith("_") or name.startswith("."):
             continue
         if os.path.isdir(os.path.join(curdir, name)):
@@ -24,5 +25,8 @@ def walk(curdir):
 
 
 if __name__ == "__main__":
-    walk(ROOTDIR)
-    write_init(ROOTDIR)
+    # Only the generated spec tree gets machine-written __init__ files.
+    # eidosxr/__init__.py and eidosxr/api/__init__.py are hand-maintained —
+    # regeneration must not rewrite them (import order there is deliberate).
+    walk(SPECDIR)
+    write_init(SPECDIR)

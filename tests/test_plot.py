@@ -4,7 +4,7 @@ import altair as alt
 import pandas as pd
 import numpy as np
 
-from oceanum.eidos import (
+from eidosxr import (
     Eidos,
     Plot,
     EidosSpecError,
@@ -36,7 +36,11 @@ def basic_spec():
     )
     root_node = Plot(id="test", plotSpec=EidosChart(chart))
     eidos = Eidos(
-        id="test", name="test", description="I am an EIDOS spec", data=[], root=root_node
+        id="test",
+        name="test",
+        description="I am an EIDOS spec",
+        data=[],
+        root=root_node,
     )
     return eidos
 
@@ -49,7 +53,6 @@ def test_basic_init(basic_spec):
 
 def test_basic_change(basic_spec):
     eidos = basic_spec
-    eidos.root.width = 800
     eidos.root.id = "new_name"
     del eidos.description
     assert not hasattr(eidos, "description")
@@ -58,8 +61,12 @@ def test_basic_change(basic_spec):
 
 def test_change_fail(basic_spec):
     eidos = basic_spec
+    # A field that no longer exists on Plot (width was removed from the schema)
     with pytest.raises(EidosSpecError):
-        eidos.root.plotSpec = {"data": "not a valid vega spec"}
+        eidos.root.width = 800
+    # A plotSpec that is neither a dict, JSON string nor an Altair chart
+    with pytest.raises(EidosSpecError):
+        eidos.root.plotSpec = 12345
 
 
 def test_named_data(basic_spec, data):

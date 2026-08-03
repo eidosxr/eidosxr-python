@@ -5,8 +5,12 @@ import json
 import numpy as np
 import pytest
 
-from eidosxr import ConsistencyError, check_store_consistency
-from eidosxr.consistency import compare_stores, load_consolidated_metadata
+from eidosxr.api.consistency import (
+    ConsistencyError,
+    check_store_consistency,
+    compare_stores,
+    load_consolidated_metadata,
+)
 
 
 def _zarray(shape, chunks, dtype, dims):

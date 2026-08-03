@@ -1,5 +1,5 @@
 import pytest
-from oceanum.eidos import Eidos, Document
+from eidosxr import Eidos, Document
 
 
 @pytest.fixture

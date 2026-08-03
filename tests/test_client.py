@@ -3,10 +3,9 @@
 import pytest
 import responses
 
-from eidosxr import (
+from eidosxr import Document, Eidos
+from eidosxr.api import (
     Dataset,
-    Document,
-    Eidos,
     EidosConnection,
     EidosError,
     NotFound,

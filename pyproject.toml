@@ -33,15 +33,13 @@ requires-python = '>=3.9'
 dynamic = ['version']
 
 # The code lives in the top-level ``eidosxr`` package (named to avoid the
-# unrelated ``eidos`` project on PyPI). The ``oceanum.eidos`` package is a thin
-# back-compatibility shim that re-exports ``eidosxr`` into the shared ``oceanum``
-# namespace, so ``from oceanum.eidos import ...`` keeps working.
+# unrelated ``eidos`` project on PyPI): ``eidosxr.spec`` holds the generated
+# schema models, ``eidosxr.api`` the platform API client.
 [tool.setuptools.packages.find]
-include = ['eidosxr*', 'oceanum.eidos']
-namespaces = true
+include = ['eidosxr*']
 
 [tool.setuptools.package-data]
-'eidosxr._templates' = ['*.j2']
+'eidosxr.spec._templates' = ['*.j2']
 
 [tool.setuptools.dynamic]
 version = {attr = 'eidosxr.version.__version__'}
