@@ -34,7 +34,7 @@ echo "Extracted version from npm package: $VERSION"
 # Create version file
 echo "# Auto-generated file - DO NOT EDIT
 __version__ = \"$VERSION\"
-" > "$ROOTDIR/oceanum/eidos/version.py"
+" > "$ROOTDIR/eidosxr/version.py"
 echo "Created version.py with version $VERSION"
 
 #Create a stub for the vega-lite schema
@@ -61,17 +61,17 @@ perl -p -i -e "s|menu.json|document.json|g" $TMP/node/grid.json
 
 
 
-datamodel-codegen --input-file-type jsonschema --input $TMP --output $ROOTDIR/oceanum/eidos/ --output-model-type pydantic_v2.BaseModel --base-class=oceanum.eidos._basemodel.EidosModel --use-subclass-enum --use-schema-description --use-field-description
+datamodel-codegen --input-file-type jsonschema --input $TMP --output $ROOTDIR/eidosxr/ --output-model-type pydantic_v2.BaseModel --base-class=eidosxr._basemodel.EidosModel --use-subclass-enum --use-schema-description --use-field-description
 
 python $ROOTDIR/autogen/gen_init.py
 
 # Fix circular import: world.py imports panel, but panel.py imports world (via node/__init__.py).
 # Remove the panel import from world.py and defer all model_rebuild() calls that transitively
 # reference panel.EidosPanel (World, Grid, Menu) to panel.py, where panel is fully defined.
-WORLD_PY=$ROOTDIR/oceanum/eidos/node/world.py
-GRID_PY=$ROOTDIR/oceanum/eidos/node/grid.py
-MENU_PY=$ROOTDIR/oceanum/eidos/node/menu.py
-PANEL_PY=$ROOTDIR/oceanum/eidos/panel.py
+WORLD_PY=$ROOTDIR/eidosxr/node/world.py   
+GRID_PY=$ROOTDIR/eidosxr/node/grid.py
+MENU_PY=$ROOTDIR/eidosxr/node/menu.py
+PANEL_PY=$ROOTDIR/eidosxr/panel.py
 
 # Remove `panel` from world.py's import and its model_rebuild() call
 perl -p -i -e "s|from \.\. import common, panel|from .. import common|g" $WORLD_PY
@@ -87,4 +87,4 @@ perl -p -i -e "s|^Menu\.model_rebuild\(\)$|# model_rebuild() called in panel.py 
 perl -p -i -e "s|^EidosPanel\.model_rebuild\(\)$|import sys as _sys\n_panel_ns = {\"panel\": _sys.modules[__name__]}\nworld.World.model_rebuild(_types_namespace=_panel_ns)\ngrid.Grid.model_rebuild(_types_namespace=_panel_ns)\nmenu.Menu.model_rebuild(_types_namespace=_panel_ns)\nEidosPanel.model_rebuild()|g" $PANEL_PY
 
 #vegaspec is a special case - copy Altair wrapper to vegaspec.py
-cp $ROOTDIR/autogen/_vegaspec.py $ROOTDIR/oceanum/eidos/vegaspec.py
+cp $ROOTDIR/autogen/_vegaspec.py $ROOTDIR/eidosxr/vegaspec.py
