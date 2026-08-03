@@ -1,17 +1,6 @@
-from .base import *
-from .features import *
-from .consistency import *
-from .oceanql import *
-from .geojson import *
-from .vegaspec import *
-from .version import *
-from .exceptions import *
-from .node import *
-from .apimodels import *
-from .panel import *
-from .root import *
-from .state import *
-from .common import *
-from .theme import *
-from .client import *
-from .data import *
+# Hand-maintained — autogen/gen_init.py only rewrites the eidosxr/spec tree.
+# Order is deliberate: spec (schema models) first, api (platform client)
+# second, so api names win a collision (e.g. Dataset -> api.apimodels.Dataset).
+from .spec import *
+from .api import *
+from . import version

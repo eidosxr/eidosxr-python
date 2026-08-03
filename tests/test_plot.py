@@ -4,7 +4,7 @@ import altair as alt
 import pandas as pd
 import numpy as np
 
-from oceanum.eidos import (
+from eidosxr import (
     Eidos,
     Plot,
     EidosSpecError,
