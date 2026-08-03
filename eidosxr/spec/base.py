@@ -130,7 +130,12 @@ class EidosDatasource(EidosData):
         elif isinstance(data, Dataset):
             dstype = "dataset"
         elif isinstance(data, Query):
-            dstype = "oceanumDatamesh"
+            # Only explicitly-set fields: datamesh Query defaults (e.g.
+            # resample='linear') are not valid in the EIDOS oceanql schema.
+            data = json.loads(
+                data.model_dump_json(exclude_none=True, exclude_defaults=True)
+            )
+            dstype = "oceanql"
         else:
             raise EidosError("Invalid inline data type")
         if dstype == "dataset":
@@ -151,6 +156,11 @@ class EidosDatasource(EidosData):
                             "Multi-dimensional object variables not supported"
                         )
                     values = [str(x) for x in values]
+                    dtype = "string"
+                elif dtype.startswith("datetime64"):
+                    # The schema has no datetime dtype — times go over the wire
+                    # as ISO 8601 strings, which the renderer normalises.
+                    values = [isotime(x) for x in values]
                     dtype = "string"
                 data["variables"][v] = {
                     "data": values,

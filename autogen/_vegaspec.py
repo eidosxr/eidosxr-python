@@ -23,5 +23,13 @@ class TopLevelSpec(RootModel[dict]):
         if isinstance(spec, dict):
             return spec
         elif isinstance(spec, str):
-            return json.loads(spec)
-        return spec.to_dict()
+            try:
+                return json.loads(spec)
+            except ValueError as e:
+                raise EidosSpecError(f"plotSpec string is not valid JSON: {e}")
+        elif hasattr(spec, "to_dict"):  # altair Chart, LayerChart, ConcatChart, ...
+            return spec.to_dict()
+        raise EidosSpecError(
+            f"Invalid plot spec type {type(spec).__name__} — expected a vega/vega-lite "
+            "dict, a JSON string or an Altair chart"
+        )

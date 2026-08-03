@@ -67,11 +67,19 @@ pandas `DataFrame` or an xarray `Dataset` (inline dataset), a geopandas
 
 ```python
 import pandas as pd
+from oceanum.datamesh import Query
 from eidosxr import EidosDatasource
 
-df = pd.DataFrame({"x": [0.0, 1.0, 2.0], "v": [3.1, 2.7, 4.2]})
-ds = EidosDatasource("profile", df)     # dataType == "dataset"
+df = pd.DataFrame({"time": pd.date_range("2021-01-01", periods=3), "v": [3.1, 2.7, 4.2]})
+inline = EidosDatasource("profile", df)   # dataType == "dataset"
+
+remote = EidosDatasource(                 # dataType == "oceanql"
+    "waves", Query(datasource="oceanum_wave_glob05_era5_v1_grid")
+)
 ```
+
+Datetime columns are serialised to ISO 8601 strings, which the renderer
+normalises back to times.
 
 ## Platform API client
 
