@@ -1,5 +1,10 @@
 ROOTDIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )/..
-SCHEMAURL=https://schemas.oceanum.io/eidos
+# EIDOS schemas are published under their major.minor, matching their $ids
+# (https://schemas.oceanum.io/eidos/v0.12/...). The shared schemas (geojson.json)
+# are not versioned with EIDOS and stay at the host root.
+SCHEMAHOST=https://schemas.oceanum.io
+MINOR_VERSION=$(node -p "require('$ROOTDIR/../../package.json').version.split('.').slice(0, 2).join('.')")
+SCHEMAURL=$SCHEMAHOST/eidos/v$MINOR_VERSION
 echo $SCHEMAURL
 
 # Extract version from root schema
@@ -11,7 +16,7 @@ rm -rf $TMP/*
 mkdir $TMP/node
 mkdir $TMP/node/worldlayer
 
-curl -s $SCHEMAURL/../geojson.json -o $TMP/geojson.json
+curl -s $SCHEMAHOST/geojson.json -o $TMP/geojson.json
 curl -s $SCHEMAURL/root.json -o $TMP/core/root.json
 curl -s $SCHEMAURL/data.json -o $TMP/core/data.json
 curl -s $SCHEMAURL/common.json -o $TMP/core/common.json

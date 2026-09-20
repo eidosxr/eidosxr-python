@@ -21,10 +21,6 @@ class ViewType(Enum):
     globe = 'globe'
 
 
-class ViewState(EidosModel):
-    viewType: Optional[ViewType] = None
-
-
 class BaseLayerPreset(str, Enum):
     """
     Base layer preset. 'oceanum' is the Oceanum cartography; 'outdoors', 'light', 'dark', 'satellite', 'satellite-streets' and 'mapbox' are the standard Mapbox styles. 'terrain' is DEPRECATED — use satellite-streets with the world terrain option instead; legacy specs are normalized to that pairing with a deprecation warning.
@@ -524,6 +520,10 @@ class LevelSelect(EidosModel):
     """
     Default level value for this layer
     """
+
+
+class ViewState(View):
+    viewType: Optional[ViewType] = None
 
 
 class BaseLayer(RootModel[Optional[Union[BaseLayerPreset, BaseLayerConfig]]]):
