@@ -6,8 +6,7 @@ name: Publish to PyPI
 # The package version comes from eidosxr/version.py (dynamic attr), NOT from the
 # tag, so the tag must match it: tagging v0.12.1 while version.py still says
 # 0.12.0 stops here rather than publishing the wrong version. version.py is
-# written by autogen/gen_models.sh, so regenerating the models resets a hand
-# bump. To release, bump version.py, merge, then push the matching tag:
+# maintained by hand. To release, bump it, merge, then push the matching tag:
 #
 #   git tag v0.12.0 && git push origin v0.12.0
 #
