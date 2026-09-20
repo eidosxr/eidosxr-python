@@ -59,7 +59,10 @@ test=[
     'tox'
 ]
 development=[
-    'datamodel-code-generator'
+    # Pinned: the generated models differ materially between versions, and
+    # current releases cannot process node/world.json. [http] fetches the shared
+    # datamesh schemas that the EIDOS schemas reference.
+    'datamodel-code-generator[http]==0.28.5'
 ]
 doc = ['sphinx']
 
