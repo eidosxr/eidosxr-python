@@ -14,7 +14,7 @@ Python, and drive the EIDOS platform API.
 pip install eidosxr
 ```
 
-Requires Python ≥ 3.9.
+Requires Python ≥ 3.10.
 
 ## Package layout
 
