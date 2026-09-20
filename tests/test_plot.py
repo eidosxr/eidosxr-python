@@ -24,7 +24,15 @@ def data():
 
 @pytest.fixture
 def basic_spec():
-    cars = pd.read_json("https://vega.github.io/vega-datasets/data/cars.json")
+    # A few rows in the shape of the vega `cars` dataset. Downloading it made
+    # every run, including the one that gates a release, depend on the network.
+    cars = pd.DataFrame(
+        {
+            "Horsepower": [130, 165, 95, 88],
+            "Miles_per_Gallon": [18.0, 15.0, 24.0, 27.0],
+            "Origin": ["USA", "USA", "Japan", "Europe"],
+        }
+    )
     chart = (
         alt.Chart(cars)
         .mark_point()
