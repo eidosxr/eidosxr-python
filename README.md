@@ -123,10 +123,11 @@ that path as a second argument, e.g. from a checkout of the
 bash autogen/gen_models.sh v0.12 ../eidos/packages/schemas/src/eidos
 ```
 
-The script stops if the schemas are not the version asked for, or if anything
-fails. `datamodel-code-generator` is pinned in the `development` extra: its
-output differs materially between versions, and current releases cannot
-process `node/world.json`. The script writes the spec tree only —
+The script stops if the schemas are not the version asked for, if
+`datamodel-codegen` is not the pinned version, or if anything fails.
+`datamodel-code-generator` is pinned in the `development` extra: its output
+differs materially between versions, and current releases cannot process
+`node/world.json`. The script writes the spec tree only —
 `eidosxr/__init__.py`, `eidosxr/api/__init__.py` and `eidosxr/version.py` are
 hand-maintained. Run the tests afterwards; `tests/test_nested_world.py` guards
 against the generator dropping a nested world's view state.

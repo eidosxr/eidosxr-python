@@ -22,6 +22,14 @@ if [[ ! $VERSION =~ ^v[0-9]+\.[0-9]+$ ]]; then
   exit 2
 fi
 
+# Must match the pin in pyproject.toml's development extra.
+CODEGEN_VERSION=0.28.5
+FOUND_VERSION=$(datamodel-codegen --version)
+if [ "$FOUND_VERSION" != "$CODEGEN_VERSION" ]; then
+  echo "datamodel-codegen $CODEGEN_VERSION is required, found $FOUND_VERSION (pip install -e '.[development]')" >&2
+  exit 1
+fi
+
 ROOTDIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." &> /dev/null && pwd)
 SCHEMAHOST=https://schemas.oceanum.io
 SCHEMAURL=$SCHEMAHOST/eidos/$VERSION
@@ -50,8 +58,11 @@ else
 fi
 
 # The schemas must be the version asked for: their $ids carry it.
-if ! grep -q "\"\$id\": \"$SCHEMAURL/root.json\"" "$TMP/root.json"; then
-  echo "root.json is not the $VERSION schema (expected \$id $SCHEMAURL/root.json)" >&2
+# Read the $id from the parsed JSON rather than matching text, so the check does
+# not depend on how the file is formatted.
+SCHEMAID=$(python -c 'import json, sys; print(json.load(open(sys.argv[1])).get("$id", ""))' "$TMP/root.json")
+if [ "$SCHEMAID" != "$SCHEMAURL/root.json" ]; then
+  echo "root.json is not the $VERSION schema (expected \$id $SCHEMAURL/root.json, found '$SCHEMAID')" >&2
   exit 1
 fi
 
