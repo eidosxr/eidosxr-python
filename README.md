@@ -106,18 +106,31 @@ Failed requests raise typed exceptions from `eidosxr.api` — for example
 
 ## Regenerating the models (development)
 
-The models in `eidosxr/spec/` are generated. From a checkout of the
-[eidos monorepo](https://github.com/eidosxr/eidos) (this repo is its
-`bindings/python` submodule, and the script reads the schemas and version
-from the parent checkout):
+The models in `eidosxr/spec/` are generated from the EIDOS JSON schemas. Pass
+the schema version; the script reads that version's published path,
+`https://schemas.oceanum.io/eidos/v0.12/`:
 
 ```bash
-bash autogen/gen_models.sh
+pip install -e '.[development]'
+bash autogen/gen_models.sh v0.12
 ```
 
-Requires `datamodel-code-generator` and `node`. The script writes the spec
-tree only — `eidosxr/__init__.py` and `eidosxr/api/__init__.py` are
-hand-maintained.
+To generate from schemas that are not published yet, give the local copy of
+that path as a second argument, e.g. from a checkout of the
+[eidos monorepo](https://github.com/eidosxr/eidos):
+
+```bash
+bash autogen/gen_models.sh v0.12 ../eidos/packages/schemas/src/eidos
+```
+
+The script stops if the schemas are not the version asked for, if
+`datamodel-codegen` is not the pinned version, or if anything fails.
+`datamodel-code-generator` is pinned in the `development` extra: its output
+differs materially between versions, and current releases cannot process
+`node/world.json`. The script writes the spec tree only —
+`eidosxr/__init__.py`, `eidosxr/api/__init__.py` and `eidosxr/version.py` are
+hand-maintained. Run the tests afterwards; `tests/test_nested_world.py` guards
+against the generator dropping a nested world's view state.
 
 ## Tests
 
