@@ -1,16 +1,27 @@
 name: Publish to PyPI
 
-# Publishes eidosxr to PyPI when a GitHub Release is published.
+# Publishes eidosxr to PyPI when a version tag (v0.12.0, v1.2.3, ...) is pushed.
 # Uses PyPI Trusted Publishing (OIDC) — no API token/secret is stored.
-# The package version is taken from eidosxr/version.py (dynamic attr), NOT the
-# release tag, so bump that file to match the tag before publishing.
+#
+# The package version comes from eidosxr/version.py (dynamic attr), NOT from the
+# tag, so the tag must match it: tagging v0.12.1 while version.py still says
+# 0.12.0 stops here rather than publishing the wrong version. To release, bump
+# version.py, merge, then push the matching tag:
+#
+#   git tag v0.12.0 && git push origin v0.12.0
+#
+# Creating a GitHub Release for a new tag pushes that tag, so it publishes too.
 on:
-  release:
-    types: [published]
+  push:
+    tags: ['v*.*.*']
 
 jobs:
+  test:
+    uses: ./.github/workflows/test.yml
+
   publish:
     name: Build and publish
+    needs: test
     runs-on: ubuntu-latest
     environment:
       name: pypi
@@ -19,6 +30,15 @@ jobs:
       id-token: write # required for OIDC trusted publishing
     steps:
       - uses: actions/checkout@v7
+
+      - name: Check the tag matches the package version
+        run: |
+          version=$(sed -n 's/^__version__ = "\(.*\)"$/\1/p' eidosxr/version.py)
+          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match eidosxr/version.py ($version)"
+            exit 1
+          fi
+          echo "Publishing eidosxr $version"
 
       - name: Install uv
         uses: astral-sh/setup-uv@v8.3.1

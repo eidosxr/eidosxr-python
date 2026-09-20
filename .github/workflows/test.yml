@@ -1,0 +1,26 @@
+name: Test
+
+# Runs the test suite on every supported Python version. Also called by
+# publish.yml, so nothing is published unless this passes.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_call:
+
+jobs:
+  test:
+    name: pytest (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.10', '3.11', '3.12', '3.13']
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v8.3.1
+
+      - name: Run tests
+        run: uv run --python ${{ matrix.python-version }} --extra test pytest
