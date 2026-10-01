@@ -1,6 +1,7 @@
 import json
 import re
 import os
+import sys
 import time
 import tempfile
 import webbrowser
@@ -14,9 +15,9 @@ from .exceptions import EidosError
 from .. import version
 from .._optional import import_optional
 
-# The data helpers below (isotime, EidosDatasource, EidosChart) import pandas,
-# geopandas, xarray, oceanum and altair when called, not here: they are the
-# optional data extra (pip install 'eidosxr[data]').
+# The data helpers below (isotime, EidosDatasource, EidosChart) need pandas,
+# geopandas, xarray, oceanum or altair — the optional data extra (pip install
+# 'eidosxr[data]') — so they import them when called, not here.
 
 __all__ = ["Eidos", "EidosDatasource", "EidosChart", "isotime"]
 
@@ -99,6 +100,13 @@ class Eidos(EidosSpecification):
             return webbrowser.open_new_tab(url)
 
 
+def _is_instance(data, module: str, cls: str) -> bool:
+    """isinstance against a data-extra class without importing its library: an
+    instance can only exist if the library is already loaded."""
+    mod = sys.modules.get(module)
+    return mod is not None and isinstance(data, getattr(mod, cls))
+
+
 def isotime(x):
     t = import_optional("pandas").Timestamp(x)
     if not t.tz:
@@ -116,24 +124,23 @@ class EidosDatasource(EidosData):
 
     Raises:
         EidosError: If an invalid inline data type is provided.
+        ImportError: If a library the data type needs is missing
+            (pip install 'eidosxr[data]').
 
     """
 
     def __init__(self, id, data, coordkeys={}):
-        DataFrame = import_optional("pandas").DataFrame
-        GeoDataFrame = import_optional("geopandas").GeoDataFrame
-        Dataset = import_optional("xarray").Dataset
-        Query = import_optional("oceanum.datamesh").Query
-        if isinstance(data, GeoDataFrame):
+        if _is_instance(data, "geopandas", "GeoDataFrame"):
             data = data.__geo_interface__
             data["coordkeys"] = {**coordkeys, "g": "geometry"}
             dstype = "geojson"
-        elif isinstance(data, DataFrame):
+        elif _is_instance(data, "pandas", "DataFrame"):
+            import_optional("xarray")  # DataFrame.to_xarray needs it
             data = data.to_xarray()
             dstype = "dataset"
-        elif isinstance(data, Dataset):
+        elif _is_instance(data, "xarray", "Dataset"):
             dstype = "dataset"
-        elif isinstance(data, Query):
+        elif _is_instance(data, "oceanum.datamesh", "Query"):
             # Only explicitly-set fields: datamesh Query defaults (e.g.
             # resample='linear') are not valid in the EIDOS oceanql schema.
             data = json.loads(

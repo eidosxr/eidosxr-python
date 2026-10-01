@@ -12,15 +12,17 @@ LAZY_FOOTER = '''
 
 # Names that need the data extra (eidosxr[data]) resolve on first access
 # (PEP 562), so importing eidosxr.spec does not load the data stack.
-from .._optional import DATA_EXPORTS as _DATA_EXPORTS, data_export as _data_export
+from typing import TYPE_CHECKING as _TYPE_CHECKING
 
+from .._optional import lazy_exports as _lazy_exports
 
-def __getattr__(name):
-    return _data_export(name, __name__)
+__getattr__, __dir__ = _lazy_exports(__name__)
 
-
-def __dir__():
-    return sorted(set(globals()) | set(_DATA_EXPORTS))
+if _TYPE_CHECKING:
+    import altair
+    from oceanum.datamesh import Query
+    from . import oceanql
+    from .oceanql import OceanQL
 '''
 
 

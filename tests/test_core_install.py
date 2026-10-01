@@ -7,7 +7,8 @@ or numpy (they are the ``eidosxr[data]`` extra). These tests check that
 - the spec models, the Eidos wrapper, the API client and the exceptions work
   with those libraries made unimportable;
 - the data helpers then fail with an ImportError naming the extra;
-- every name eidosxr exported before the split (0.12.0) is still exported.
+- every name eidosxr exported before the split (0.12.0) is still exported, and
+  ``from eidosxr import *`` binds the same names.
 
 The data stack is blocked in a subprocess by a ``sys.meta_path`` finder, so the
 tests also run in the full environment. CI additionally runs the whole suite in
@@ -17,7 +18,6 @@ an environment without the extra (see .github/workflows/test.yml).
 from __future__ import annotations
 
 import importlib
-import importlib.util
 import json
 import os
 import subprocess
@@ -27,7 +27,7 @@ from pathlib import Path
 
 import pytest
 
-from eidosxr._optional import DATA_EXPORTS, INSTALL_HINT
+from eidosxr._optional import DATA_EXPORTS, INSTALL_HINT, import_optional, is_installed
 
 # The top-level packages of the data extra (numpy comes in with pandas/xarray).
 DATA_STACK = ("oceanum", "pandas", "geopandas", "xarray", "altair", "numpy")
@@ -38,26 +38,33 @@ EXPORTED_NAMES: dict[str, list[str]] = json.loads(
     (Path(__file__).parent / "data" / "exported_names_0_12_0.json").read_text()
 )
 
-BLOCKER = textwrap.dedent(
-    f"""
-    import sys
 
-    BLOCKED = {DATA_STACK!r}
+def _blocker(packages: tuple[str, ...] = DATA_STACK) -> str:
+    """Code that makes ``packages`` unimportable, as if they were not installed."""
+    return textwrap.dedent(
+        f"""
+        import sys
 
-    class _BlockDataStack:
-        # Makes the data extra unimportable, as in a core-only install.
-        def find_spec(self, name, path=None, target=None):
-            if name.split(".")[0] in BLOCKED:
-                raise ImportError(f"{{name}} is blocked (core-only test)")
-            return None
+        BLOCKED = {packages!r}
 
-    sys.meta_path.insert(0, _BlockDataStack())
-    """
-)
+        class _Block:
+            def find_spec(self, name, path=None, target=None):
+                top = name.split(".")[0]
+                if top in BLOCKED:
+                    raise ModuleNotFoundError(f"No module named {{top!r}}", name=top)
+                return None
+
+        sys.meta_path.insert(0, _Block())
+        """
+    )
 
 
-def _data_extra_installed() -> bool:
-    return all(importlib.util.find_spec(m) is not None for m in DATA_STACK)
+BLOCKER = _blocker()
+
+
+def _available(name: str) -> bool:
+    """Whether a pre-split name should import here: data names need their package."""
+    return name not in DATA_EXPORTS or is_installed(DATA_EXPORTS[name].requires)
 
 
 def _run(code: str) -> str:
@@ -162,6 +169,23 @@ def test_core_without_data_stack():
         assert issubclass(ConsistencyError, EidosError)
         assert load_consolidated_metadata(lambda key: b'{"metadata": {}}') == {}
 
+        # A plain data object is not a valid datasource; nothing is imported.
+        from eidosxr import EidosDatasource
+        try:
+            EidosDatasource("d", {"a": [1]})
+        except EidosError as exc:
+            assert "Invalid inline data type" in str(exc)
+        else:
+            raise AssertionError("dict accepted as a datasource")
+
+        # Introspection skips the data names instead of failing on them.
+        import inspect, pydoc
+        for module in (eidosxr, eidosxr.spec):
+            assert not set(dir(module)) & {"OceanQL", "Query", "altair", "oceanql"}
+            inspect.getmembers(module)
+            pydoc.render_doc(module)
+        assert "OceanQL" not in eidosxr.__all__
+
         assert not [m for m in sys.modules if m.split(".")[0] in BLOCKED]
         print("ok")
         """
@@ -175,7 +199,7 @@ def test_data_helpers_name_the_extra():
         """
         import json
         import eidosxr, eidosxr.spec
-        from eidosxr import EidosChart, EidosDatasource, isotime
+        from eidosxr import EidosChart, isotime
         from eidosxr.api.consistency import check_store_consistency
 
         zarray = {"shape": [2], "chunks": [2], "dtype": "<i8", "compressor": None}
@@ -184,7 +208,6 @@ def test_data_helpers_name_the_extra():
             "x/0": bytes(16),
         }
         calls = {
-            "EidosDatasource": lambda: EidosDatasource("d", {"a": [1]}),
             "EidosChart": lambda: EidosChart({"mark": "point"}),
             "isotime": lambda: isotime("2026-01-01"),
             "check_store_consistency": lambda: check_store_consistency(store),
@@ -229,19 +252,72 @@ def test_exported_names_still_import(module: str):
 
     Without the data extra, the data names raise an ImportError naming it.
     """
-    full = _data_extra_installed()
-    missing, wrong_error = [], []
+    unexpected = []
     for name in EXPORTED_NAMES[module]:
         try:
             exec(f"from {module} import {name}", {})
         except ImportError as exc:
-            if full or name not in DATA_EXPORTS or INSTALL_HINT not in str(exc):
-                wrong_error.append(f"{name}: {exc}")
+            if _available(name) or INSTALL_HINT not in str(exc):
+                unexpected.append(f"{name}: {exc}")
         else:
-            if not full and name in DATA_EXPORTS:
-                missing.append(f"{name} imported without the data extra")
-    assert not missing and not wrong_error, missing + wrong_error
-    assert set(EXPORTED_NAMES[module]) <= set(dir(importlib.import_module(module)))
+            if not _available(name):
+                unexpected.append(f"{name} imported without its package")
+    assert not unexpected
+    expected = {n for n in EXPORTED_NAMES[module] if _available(n)}
+    assert expected <= set(dir(importlib.import_module(module)))
+
+
+def test_star_import_binds_the_same_names():
+    """``from eidosxr import *`` binds every pre-split name that can import here.
+
+    ``from eidosxr.spec import *`` binds all but the data names, which it never
+    resolves (eidosxr star-imports it, so it must stay light).
+    """
+    namespace: dict = {}
+    exec("from eidosxr import *", namespace)
+    expected = {n for n in EXPORTED_NAMES["eidosxr"] if _available(n)}
+    assert expected <= set(namespace)
+
+    namespace = {}
+    exec("from eidosxr.spec import *", namespace)
+    expected = set(EXPORTED_NAMES["eidosxr.spec"]) - set(DATA_EXPORTS)
+    assert expected <= set(namespace)
+
+
+def test_datasource_imports_only_what_it_needs():
+    """A DataFrame without xarray names the extra; nothing else is imported."""
+    if not is_installed("pandas"):
+        pytest.skip("needs pandas")
+    code = _blocker(("xarray", "geopandas", "oceanum")) + textwrap.dedent(
+        """
+        import pandas as pd
+        from eidosxr import EidosDatasource
+        try:
+            EidosDatasource("d", pd.DataFrame({"a": [1, 2]}))
+        except ImportError as exc:
+            print(str(exc))
+        """
+    )
+    message = _run(code)
+    assert "xarray" in message and INSTALL_HINT in message
+
+
+def test_import_optional_keeps_unrelated_errors(tmp_path, monkeypatch):
+    """Only a missing package gets the install hint; a broken one is re-raised."""
+    (tmp_path / "eidosxr_broken_pkg").mkdir()
+    (tmp_path / "eidosxr_broken_pkg" / "__init__.py").write_text(
+        "import eidosxr_no_such_dependency\n"
+    )
+    monkeypatch.syspath_prepend(str(tmp_path))
+
+    with pytest.raises(ImportError) as missing:
+        import_optional("eidosxr_no_such_pkg")
+    assert INSTALL_HINT in str(missing.value)
+
+    with pytest.raises(ImportError) as broken:
+        import_optional("eidosxr_broken_pkg")
+    assert INSTALL_HINT not in str(broken.value)
+    assert broken.value.name == "eidosxr_no_such_dependency"
 
 
 def test_exported_names_without_data_stack():
@@ -267,5 +343,6 @@ def test_exported_names_without_data_stack():
         for name in names
         if name in DATA_EXPORTS
     }
+    assert expected  # the snapshot does contain data names
     assert set(failed) == expected
     assert all(INSTALL_HINT in message for message in failed.values()), failed
