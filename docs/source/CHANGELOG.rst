@@ -15,9 +15,12 @@ Packaging change; the EIDOS schema (v0.12) and the public names are unchanged.
 * Importing ``eidosxr`` no longer loads the data stack. The data helpers import
   it when called and, without the extra, raise an ``ImportError`` naming
   ``pip install 'eidosxr[data]'``.
-* ``from eidosxr import X`` keeps working for every name exported by 0.12.0;
-  ``OceanQL``, ``Query``, ``altair`` and ``oceanql`` now resolve on first
-  access.
+* ``from eidosxr import X`` and ``from eidosxr import *`` keep working for
+  every name exported by 0.12.0. ``OceanQL``, ``Query``, ``altair`` and
+  ``oceanql`` now resolve on first access. Without the data extra they are left
+  out of ``dir()`` and ``from eidosxr import *``, and accessing them (including
+  ``hasattr``) raises the ``ImportError``. ``from eidosxr.spec import *`` no
+  longer binds them; import them by name.
 
 0.1.0 (2024-02-13)
 ------------------

@@ -32,8 +32,10 @@ that says to `pip install 'eidosxr[data]'`.
 > data stack too. From 0.12.1 it is the `data` extra, so if you use
 > `EidosDatasource`, `EidosChart`, `isotime`, `OceanQL` or the zarr consistency
 > checks, install `eidosxr[data]` (or depend on it in your requirements). The
-> schema and the public names are unchanged: `from eidosxr import X` still
-> works for every name exported before.
+> schema and the public names are unchanged: `from eidosxr import X` and
+> `from eidosxr import *` still work for every name exported before. The one
+> exception is `from eidosxr.spec import *`, which no longer binds `OceanQL`;
+> import it by name.
 
 ## Package layout
 
