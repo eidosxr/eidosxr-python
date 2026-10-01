@@ -5,18 +5,18 @@ import time
 import tempfile
 import webbrowser
 import jinja2
-import altair
 from jsonpatch import JsonPatch
-from pandas import DataFrame, Timestamp
-from geopandas import GeoDataFrame
-from xarray import Dataset
-from oceanum.datamesh import Query
 
 from .root import EidosSpecification
 from .data import EidosData
 from .vegaspec import TopLevelSpec
 from .exceptions import EidosError
 from .. import version
+from .._optional import import_optional
+
+# The data helpers below (isotime, EidosDatasource, EidosChart) import pandas,
+# geopandas, xarray, oceanum and altair when called, not here: they are the
+# optional data extra (pip install 'eidosxr[data]').
 
 __all__ = ["Eidos", "EidosDatasource", "EidosChart", "isotime"]
 
@@ -100,7 +100,7 @@ class Eidos(EidosSpecification):
 
 
 def isotime(x):
-    t = Timestamp(x)
+    t = import_optional("pandas").Timestamp(x)
     if not t.tz:
         t = t.tz_localize("UTC")
     return t.isoformat()
@@ -120,6 +120,10 @@ class EidosDatasource(EidosData):
     """
 
     def __init__(self, id, data, coordkeys={}):
+        DataFrame = import_optional("pandas").DataFrame
+        GeoDataFrame = import_optional("geopandas").GeoDataFrame
+        Dataset = import_optional("xarray").Dataset
+        Query = import_optional("oceanum.datamesh").Query
         if isinstance(data, GeoDataFrame):
             data = data.__geo_interface__
             data["coordkeys"] = {**coordkeys, "g": "geometry"}
@@ -189,6 +193,6 @@ class EidosChart(TopLevelSpec):
     """
 
     def __init__(self, chart):
-        if not isinstance(chart, altair.Chart):
+        if not isinstance(chart, import_optional("altair").Chart):
             raise EidosError("Invalid chart type - must be an Altair Chart object")
         super().__init__(chart)
