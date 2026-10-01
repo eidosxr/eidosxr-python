@@ -1,10 +1,10 @@
 import json
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING as _TYPE_CHECKING, Union
 
 from pydantic import RootModel, model_validator
 from .exceptions import EidosSpecError
 
-if TYPE_CHECKING:  # altair is the optional data extra; never imported at runtime
+if _TYPE_CHECKING:  # altair is the optional data extra; never imported at runtime
     import altair
 
 
