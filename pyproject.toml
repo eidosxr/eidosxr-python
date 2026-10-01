@@ -8,13 +8,12 @@ description = 'Python bindings and API client for the EIDOS framework. Create, e
 readme = 'README.md'
 license = {file = 'LICENSE'}
 authors = [{name='Oceanum.io', email='support@oceanum.io'}]
+# The core install covers the spec models (eidosxr.spec) and the platform API
+# client (eidosxr.api). jinja2 renders Eidos.html(). The data helpers
+# (EidosDatasource, EidosChart, isotime, OceanQL, the zarr consistency checks)
+# need the [data] extra; see eidosxr/_optional.py.
 dependencies = [
-    "oceanum",
     "pydantic",
-    "pandas",
-    "geopandas",
-    "xarray",
-    "altair",
     "jinja2",
     "jsonpatch",
     "requests"
@@ -54,6 +53,15 @@ license-files = []
 'Repository' = 'https://github.com/eidosxr/eidosxr-python'
 
 [project.optional-dependencies]
+data = [
+    "oceanum",
+    "pandas",
+    "geopandas",
+    "xarray",
+    "altair",
+    "numpy",
+]
+all = ["eidosxr[data]"]
 test=[
     'pytest',
     'pytest-cov',

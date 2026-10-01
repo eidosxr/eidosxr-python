@@ -12,6 +12,7 @@ permissions:
   contents: read
 
 jobs:
+  # The full install (eidosxr[all]): every test runs.
   test:
     name: pytest (Python ${{ matrix.python-version }})
     runs-on: ubuntu-latest
@@ -24,6 +25,33 @@ jobs:
 
       - name: Install uv
         uses: astral-sh/setup-uv@v8.3.1
+
+      - name: Run tests
+        run: uv run --python ${{ matrix.python-version }} --extra all --extra test pytest
+
+  # The core install (pip install eidosxr): no data extra. The data-helper tests
+  # skip; tests/test_core_install.py checks the client works without the stack.
+  core:
+    name: pytest core-only (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.10', '3.14']
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v8.3.1
+
+      - name: Check the data stack is not installed
+        run: |
+          uv run --python ${{ matrix.python-version }} --extra test python -c "
+          import importlib.util, sys
+          found = [m for m in ('oceanum', 'pandas', 'geopandas', 'xarray', 'altair', 'numpy')
+                   if importlib.util.find_spec(m)]
+          sys.exit(f'core install pulled in {found}' if found else 0)
+          "
 
       - name: Run tests
         run: uv run --python ${{ matrix.python-version }} --extra test pytest

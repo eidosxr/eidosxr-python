@@ -1,8 +1,9 @@
-# import altair with an abbreviated alias
 import pytest
-import altair as alt
-import pandas as pd
-import numpy as np
+
+# The plot helpers need the data extra (pip install 'eidosxr[data]').
+alt = pytest.importorskip("altair")
+pd = pytest.importorskip("pandas")
+np = pytest.importorskip("numpy")
 
 from eidosxr import (
     Eidos,

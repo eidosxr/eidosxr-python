@@ -2,8 +2,10 @@
 
 import json
 
-import numpy as np
 import pytest
+
+# The consistency checks need numpy, from the data extra.
+np = pytest.importorskip("numpy")
 
 from eidosxr.api.consistency import (
     ConsistencyError,

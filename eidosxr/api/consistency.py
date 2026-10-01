@@ -15,17 +15,23 @@ client verify, before writing, that:
   * ``clobber`` (POST) — no check (complete replacement).
 
 A "store" is any mapping of zarr key -> object bytes (e.g. what the client PUTs).
+
+The checks need numpy, which ships in the data extra
+(``pip install 'eidosxr[data]'``); it is imported when a check runs, not when
+this module is imported.
 """
 
 from __future__ import annotations
 
 import json
 import math
-from typing import Callable, Dict, List, Mapping, Optional
+from typing import TYPE_CHECKING, Callable, Dict, List, Mapping, Optional
 
-import numpy as np
-
+from .._optional import import_optional
 from .exceptions import EidosError
+
+if TYPE_CHECKING:
+    import numpy as np
 
 ZMETADATA_KEY = ".zmetadata"
 
@@ -83,6 +89,7 @@ def _grid(zarray: dict) -> List[int]:
 
 
 def _full_chunk_bytes(zarray: dict) -> int:
+    np = import_optional("numpy")
     n = np.dtype(zarray["dtype"]).itemsize
     for c in zarray["chunks"]:
         n *= c
@@ -163,6 +170,7 @@ def decode_coordinate(getter: Getter, name: str, zarray: dict) -> np.ndarray:
             f"coordinate '{name}' is compressed/filtered — unsupported for the "
             "coordinate check (EIDOS stores are uncompressed)"
         )
+    np = import_optional("numpy")
     dtype = np.dtype(zarray["dtype"])
     sep = zarray.get("dimension_separator", ".")
     n_chunks = _grid(zarray)[0]
@@ -256,6 +264,7 @@ def compare_stores(
         if len(_zarray(existing_meta, n)["shape"]) == 1
         and (_dims(existing_meta, n) in (None, [n]))
     ]
+    np = import_optional("numpy")
     for name in coord_names:
         old = decode_coordinate(existing_get, name, _zarray(existing_meta, name))
         new = decode_coordinate(new_get, name, _zarray(new_meta, name))
@@ -271,6 +280,7 @@ def compare_stores(
 def _check_append_axis(name: str, old: np.ndarray, new: np.ndarray) -> None:
     if old.size == 0 or new.size == 0:
         raise ConsistencyError(f"coordinate '{name}': empty append axis")
+    np = import_optional("numpy")
     old_inc = bool(old[-1] >= old[0])
     new_inc = bool(new[-1] >= new[0])
     old_mono = np.all(np.diff(old) > 0) if old_inc else np.all(np.diff(old) < 0)

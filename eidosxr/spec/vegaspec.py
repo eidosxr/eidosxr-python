@@ -1,7 +1,11 @@
-import altair
 import json
+from typing import TYPE_CHECKING as _TYPE_CHECKING, Union
+
 from pydantic import RootModel, model_validator
 from .exceptions import EidosSpecError
+
+if _TYPE_CHECKING:  # altair is the optional data extra; never imported at runtime
+    import altair
 
 
 # This top level model for the vega spec is used in the PlotView model
@@ -19,7 +23,7 @@ class TopLevelSpec(RootModel[dict]):
 
     @model_validator(mode="before")
     @classmethod
-    def validate(cls, spec: dict | str | altair.Chart):
+    def validate(cls, spec: Union[dict, str, "altair.Chart"]):
         if isinstance(spec, dict):
             return spec
         elif isinstance(spec, str):
