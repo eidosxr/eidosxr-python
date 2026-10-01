@@ -11,10 +11,29 @@ Python, and drive the EIDOS platform API.
 ## Installation
 
 ```bash
-pip install eidosxr
+pip install eidosxr            # core: spec models + platform API client
+pip install 'eidosxr[data]'    # + the data helpers (pandas, xarray, Datamesh, Altair)
+pip install 'eidosxr[all]'     # everything (currently the same as [data])
 ```
 
 Requires Python ≥ 3.10.
+
+| Install | Pulls in | What works |
+| --- | --- | --- |
+| `eidosxr` | pydantic, requests, jsonpatch, jinja2 | the spec models (`eidosxr.spec`), `Eidos` (edit, diff/patch, `html()`, `show()`), the API client (`eidosxr.api`: `EidosConnection`, response models, exceptions) |
+| `eidosxr[data]` | + oceanum, pandas, geopandas, xarray, altair, numpy | also `EidosDatasource`, `EidosChart`, `isotime`, `OceanQL` and the zarr consistency checks (`check_store_consistency`, `compare_stores`, `EidosConnection.check_put_consistency`) |
+
+The core install is small (about 16 MB of site-packages, against about 770 MB
+with `[data]`). Importing `eidosxr` never loads the data stack: the data
+helpers import it when called. Without the extra they raise an `ImportError`
+that says to `pip install 'eidosxr[data]'`.
+
+> **Upgrading to 0.12.1.** Up to 0.12.0, `pip install eidosxr` installed the
+> data stack too. From 0.12.1 it is the `data` extra, so if you use
+> `EidosDatasource`, `EidosChart`, `isotime`, `OceanQL` or the zarr consistency
+> checks, install `eidosxr[data]` (or depend on it in your requirements). The
+> schema and the public names are unchanged: `from eidosxr import X` still
+> works for every name exported before.
 
 ## Package layout
 
@@ -59,6 +78,8 @@ advances the checkpoint. `Eidos.from_dict(...)` / `Eidos.from_json(...)` load
 existing specifications.
 
 ## Data binding
+
+Needs the data extra: `pip install 'eidosxr[data]'`.
 
 `EidosDatasource` wraps your data for the spec's `data` block. It accepts a
 pandas `DataFrame` or an xarray `Dataset` (inline dataset), a geopandas
@@ -129,15 +150,21 @@ The script stops if the schemas are not the version asked for, if
 differs materially between versions, and current releases cannot process
 `node/world.json`. The script writes the spec tree only —
 `eidosxr/__init__.py`, `eidosxr/api/__init__.py` and `eidosxr/version.py` are
-hand-maintained. Run the tests afterwards; `tests/test_nested_world.py` guards
+hand-maintained. `autogen/gen_init.py` writes `eidosxr/spec/__init__.py`; it
+leaves the modules that need the data extra (`oceanql.py`) out of the star
+imports and resolves their names lazily instead. Run the tests afterwards; `tests/test_nested_world.py` guards
 against the generator dropping a nested world's view state.
 
 ## Tests
 
 ```bash
-pip install -e . responses
+pip install -e '.[all,test]'
 pytest tests/
 ```
+
+With only `pip install -e '.[test]'` (the core install) the data-helper tests
+are skipped; `tests/test_core_install.py` checks the core works without the
+data stack. CI runs both.
 
 ## Licence
 
