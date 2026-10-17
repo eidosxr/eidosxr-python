@@ -79,6 +79,11 @@ JSON Patch since the last checkpoint, and `spec.patch()` returns it and
 advances the checkpoint. `Eidos.from_dict(...)` / `Eidos.from_json(...)` load
 existing specifications.
 
+Top-level keys starting with `x-` hold your own metadata: `Eidos` keeps them
+(any JSON value) and writes them back out. Any other unknown top-level key is
+rejected. A spec used as a template can also declare `parameters`
+(`TemplateParameter`) for the user to fill in.
+
 ## Data binding
 
 Needs the data extra: `pip install 'eidosxr[data]'`.
