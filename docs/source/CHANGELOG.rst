@@ -16,6 +16,9 @@ two top-level fields to the specification.
   JSON output. Other unknown top-level keys are still rejected. The generated
   ``EidosSpecification`` model still forbids every extra key: the generator
   cannot express the schema's ``^x-`` pattern, so ``Eidos`` implements it.
+* ``Eidos.model_dump_json()`` and ``str(spec)`` now omit null (unset) fields,
+  consistent with ``model_dump()``. They previously wrote them out, e.g.
+  ``"theme": null``, which the schema rejects.
 * ``EidosConnection.create_template`` documents ``node_type="spec"`` for
   whole-specification templates, and accepts an ``Eidos`` as ``spec_json``.
 

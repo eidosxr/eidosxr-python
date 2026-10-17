@@ -5,9 +5,12 @@ import sys
 import time
 import tempfile
 import webbrowser
+from typing import get_args
 import jinja2
 from jsonpatch import JsonPatch
 from pydantic import ConfigDict, ValidationError, model_serializer, model_validator
+from pydantic_core import PydanticCustomError
+from pydantic_core.core_schema import ErrorType
 
 from .root import EidosSpecification
 from .data import EidosData
@@ -33,6 +36,21 @@ j2_loader = jinja2.FileSystemLoader(TEMPLATES_PATH)
 j2_env = jinja2.Environment(loader=j2_loader, trim_blocks=True)
 
 
+_ERROR_TYPES = set(get_args(ErrorType))
+
+
+def _line_error(err):
+    """Turn a reported validation error back into one that can be raised."""
+    if err["type"] in _ERROR_TYPES:
+        return {k: err[k] for k in ("type", "loc", "input", "ctx") if k in err}
+    # A custom error type (PydanticCustomError): keep its formatted message.
+    return {
+        "type": PydanticCustomError(err["type"], err["msg"]),
+        "loc": err["loc"],
+        "input": err["input"],
+    }
+
+
 class Eidos(EidosSpecification):
     """Eidos base class. This is the EIDOS base specification.
 
@@ -49,20 +67,36 @@ class Eidos(EidosSpecification):
 
     _checkpoint = None
 
-    @model_validator(mode="after")
-    def _only_extension_keys(self):
-        extra = self.__pydantic_extra__ or {}
-        unknown = [k for k in extra if not k.startswith("x-")]
+    @model_validator(mode="wrap")
+    @classmethod
+    def _only_extension_keys(cls, data, handler):
+        # One extra_forbidden error per non-x- unknown key, located at the key,
+        # reported together with any field errors, as extra="forbid" did.
+        unknown = []
+        if isinstance(data, dict):
+            unknown = [
+                {"type": "extra_forbidden", "loc": (k,), "input": v}
+                for k, v in data.items()
+                if k not in cls.model_fields and not k.startswith("x-")
+            ]
+        try:
+            model = handler(data)
+        except ValidationError as e:
+            # model_validate runs Eidos.__init__ inside the handler, which
+            # validates (and reports the unknown keys) again: don't repeat them.
+            reported = {
+                tuple(err["loc"])
+                for err in e.errors()
+                if err["type"] == "extra_forbidden"
+            }
+            unknown = [u for u in unknown if u["loc"] not in reported]
+            if not unknown:
+                raise
+            errors = [_line_error(err) for err in e.errors()] + unknown
+            raise ValidationError.from_exception_data(cls.__name__, errors) from None
         if unknown:
-            # One error per key, located at the key, as extra="forbid" reports.
-            raise ValidationError.from_exception_data(
-                type(self).__name__,
-                [
-                    {"type": "extra_forbidden", "loc": (k,), "input": extra[k]}
-                    for k in unknown
-                ],
-            )
-        return self
+            raise ValidationError.from_exception_data(cls.__name__, unknown)
+        return model
 
     @model_serializer(mode="wrap")
     def _keep_null_extension_keys(self, handler, info):

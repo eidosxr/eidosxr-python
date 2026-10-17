@@ -126,10 +126,29 @@ def test_unknown_key_rejected():
     ]
 
 
-def test_unknown_key_rejected_from_json():
+def test_unknown_key_reported_with_field_errors():
+    # As with extra="forbid", a field error does not hide the unknown keys.
     with pytest.raises(ValidationError) as err:
-        Eidos.model_validate_json(json.dumps(_spec(bogus=1)))
-    assert [e["loc"] for e in err.value.errors()] == [("bogus",)]
+        Eidos(**_spec(id="bad id", parameters=[{**PARAMETER, "kind": "x"}], bogus=1))
+    assert sorted((e["type"], e["loc"]) for e in err.value.errors()) == [
+        ("enum", ("parameters", 0, "kind")),
+        ("extra_forbidden", ("bogus",)),
+        ("string_pattern_mismatch", ("id",)),
+    ]
+
+
+@pytest.mark.parametrize(
+    "validate",
+    [
+        lambda spec: Eidos(**spec),
+        Eidos.model_validate,
+        lambda spec: Eidos.model_validate_json(json.dumps(spec)),
+    ],
+)
+def test_unknown_key_reported_once(validate):
+    with pytest.raises(ValidationError) as err:
+        validate(_spec(id="bad id", bogus=1))
+    assert sorted(e["loc"] for e in err.value.errors()) == [("bogus",), ("id",)]
 
 
 def test_json_output_leaves_out_unset_fields():
