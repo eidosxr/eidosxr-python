@@ -259,19 +259,29 @@ class EidosConnection:
         *,
         name: str,
         node_type: str,
-        spec_json: Mapping[str, Any],
+        spec_json: Union[Eidos, Mapping[str, Any]],
         description: Optional[str] = None,
         category: Optional[str] = None,
         icon: Optional[str] = None,
         scope: Optional[str] = None,
         account_id: Optional[str] = None,
     ) -> Template:
-        """Create a template from an explicit ``spec_json`` node subtree."""
+        """Create a template from an explicit ``spec_json``.
+
+        ``spec_json`` is either a node subtree, with ``node_type`` its node type
+        (e.g. ``"plot"``), or, with ``node_type="spec"``, a whole specification
+        (an :class:`eidosxr.Eidos` or a plain dict) including any ``parameters``
+        and ``x-`` metadata keys.
+        """
         body = self._drop_none(
             {
                 "name": name,
                 "node_type": node_type,
-                "spec_json": dict(spec_json),
+                "spec_json": (
+                    spec_json.spec()
+                    if isinstance(spec_json, Eidos)
+                    else dict(spec_json)
+                ),
                 "description": description,
                 "category": category,
                 "icon": icon,

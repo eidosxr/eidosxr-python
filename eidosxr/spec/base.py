@@ -7,11 +7,13 @@ import tempfile
 import webbrowser
 import jinja2
 from jsonpatch import JsonPatch
+from pydantic import ConfigDict, ValidationError, model_serializer, model_validator
+from pydantic_core import PydanticCustomError
 
 from .root import EidosSpecification
 from .data import EidosData
 from .vegaspec import TopLevelSpec
-from .exceptions import EidosError
+from .exceptions import EidosError, EidosSpecError
 from .. import version
 from .._optional import import_optional
 
@@ -33,9 +35,65 @@ j2_env = jinja2.Environment(loader=j2_loader, trim_blocks=True)
 
 
 class Eidos(EidosSpecification):
-    """Eidos base class. This is the EIDOS base specification."""
+    """Eidos base class. This is the EIDOS base specification.
+
+    Top-level keys starting with ``x-`` are extension metadata: they are kept as
+    given (any JSON value) and written back out on dump. Any other unknown
+    top-level key is rejected.
+    """
+
+    # The root schema allows ^x- keys alongside its properties (patternProperties
+    # with additionalProperties false). datamodel-codegen cannot express that, so
+    # the generated EidosSpecification forbids all extra keys; this hand-written
+    # subclass allows extras and rejects the ones that are not x- keys.
+    model_config = ConfigDict(extra="allow")
 
     _checkpoint = None
+
+    @model_validator(mode="after")
+    def _only_extension_keys(self):
+        unknown = [k for k in self.__pydantic_extra__ or {} if not k.startswith("x-")]
+        if unknown:
+            raise PydanticCustomError(
+                "extra_forbidden",
+                "Extra inputs are not permitted: {keys}",
+                {"keys": ", ".join(unknown)},
+            )
+        return self
+
+    @model_serializer(mode="wrap")
+    def _keep_null_extension_keys(self, handler, info):
+        # exclude_none (which model_dump always sets) would drop an x- key whose
+        # value is null; it is extension data, not an unset field, so keep it.
+        data = handler(self)
+        if info.exclude_none:
+            for key, value in (self.__pydantic_extra__ or {}).items():
+                if (
+                    value is None
+                    and (info.include is None or key in info.include)
+                    and not (info.exclude and key in info.exclude)
+                ):
+                    data[key] = None
+        return data
+
+    def __setattr__(self, name, value):
+        # With extra="allow" pydantic stores an unknown attribute before the
+        # validators run, so reject a non-x- name here, as extra="forbid" did.
+        if not (name.startswith(("_", "x-")) or name in type(self).model_fields):
+            raise EidosSpecError(
+                ValidationError.from_exception_data(
+                    type(self).__name__,
+                    [
+                        {
+                            "type": "no_such_attribute",
+                            "loc": (name,),
+                            "input": value,
+                            "ctx": {"attribute": name},
+                        }
+                    ],
+                )
+            )
+        super().__setattr__(name, value)
 
     @classmethod
     def from_dict(cls, spec: dict):
