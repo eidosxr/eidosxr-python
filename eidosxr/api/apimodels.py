@@ -71,7 +71,8 @@ class PatchResult(BaseModel):
 
 
 class Template(BaseModel):
-    """A reusable node template."""
+    """A reusable template: a node subtree (``node_type`` its node type, e.g.
+    ``"plot"``) or, with ``node_type="spec"``, a whole specification."""
 
     id: str
     name: str

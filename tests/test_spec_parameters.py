@@ -120,8 +120,26 @@ def test_extension_key_edits_are_patched():
 def test_unknown_key_rejected():
     with pytest.raises(ValidationError) as err:
         Eidos(**_spec(**{"x-ok": 1, "bogus": 1, "xmeta": 2}))
-    assert err.value.errors()[0]["type"] == "extra_forbidden"
-    assert "bogus, xmeta" in str(err.value)
+    assert [(e["type"], e["loc"], e["input"]) for e in err.value.errors()] == [
+        ("extra_forbidden", ("bogus",), 1),
+        ("extra_forbidden", ("xmeta",), 2),
+    ]
+
+
+def test_unknown_key_rejected_from_json():
+    with pytest.raises(ValidationError) as err:
+        Eidos.model_validate_json(json.dumps(_spec(bogus=1)))
+    assert [e["loc"] for e in err.value.errors()] == [("bogus",)]
+
+
+def test_json_output_leaves_out_unset_fields():
+    # Unset optional fields are None; written as null they fail the schema
+    # (e.g. "parameters": null), so JSON output drops them as model_dump does.
+    spec = Eidos(**_spec(**{"x-cleared": None}))
+    for out in (json.loads(spec.model_dump_json()), json.loads(str(spec))):
+        assert out == spec.model_dump()
+        assert "parameters" not in out
+        assert out["x-cleared"] is None
 
 
 def test_unknown_attribute_assignment_rejected():

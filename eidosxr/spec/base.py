@@ -8,7 +8,6 @@ import webbrowser
 import jinja2
 from jsonpatch import JsonPatch
 from pydantic import ConfigDict, ValidationError, model_serializer, model_validator
-from pydantic_core import PydanticCustomError
 
 from .root import EidosSpecification
 from .data import EidosData
@@ -52,12 +51,16 @@ class Eidos(EidosSpecification):
 
     @model_validator(mode="after")
     def _only_extension_keys(self):
-        unknown = [k for k in self.__pydantic_extra__ or {} if not k.startswith("x-")]
+        extra = self.__pydantic_extra__ or {}
+        unknown = [k for k in extra if not k.startswith("x-")]
         if unknown:
-            raise PydanticCustomError(
-                "extra_forbidden",
-                "Extra inputs are not permitted: {keys}",
-                {"keys": ", ".join(unknown)},
+            # One error per key, located at the key, as extra="forbid" reports.
+            raise ValidationError.from_exception_data(
+                type(self).__name__,
+                [
+                    {"type": "extra_forbidden", "loc": (k,), "input": extra[k]}
+                    for k in unknown
+                ],
             )
         return self
 
@@ -122,6 +125,10 @@ class Eidos(EidosSpecification):
     def model_dump(self, **kwargs):
         """Dump model as dictionary."""
         return super().model_dump(**{**kwargs, "exclude_none": True})
+
+    def model_dump_json(self, **kwargs):
+        """Dump model as JSON, leaving out unset (None) fields as model_dump does."""
+        return super().model_dump_json(**{**kwargs, "exclude_none": True})
 
     def diff(self):
         """Get diff since last checkpoint and reset checkpoint"""
