@@ -1,6 +1,33 @@
 ChangeLog
 =========
 
+0.12.3
+------
+
+Spec templates (EID-190). Regenerated from the EIDOS v0.12 schemas, which add
+two top-level fields to the specification.
+
+* ``Eidos`` accepts ``parameters``: a list of ``TemplateParameter`` (``key``,
+  ``label``, ``kind``, ``targets``, and optional ``required``, ``default`` and
+  ``dependsOn``) that a spec template exposes for the user to fill in.
+  ``ParameterKind`` is its ``kind`` enum.
+* ``Eidos`` keeps top-level ``x-`` keys (e.g. ``"x-meta": {...}``) as given and
+  writes them back out on ``model_dump``, ``spec()``, ``diff()``/``patch()`` and
+  JSON output. Other unknown top-level keys are still rejected. The generated
+  ``EidosSpecification`` model still forbids every extra key: the generator
+  cannot express the schema's ``^x-`` pattern, so ``Eidos`` implements it.
+* ``Eidos.model_dump_json()`` and ``str(spec)`` now omit null (unset) fields,
+  consistent with ``model_dump()``. They previously wrote them out, e.g.
+  ``"theme": null``, which the schema rejects.
+* ``EidosConnection.create_template`` documents ``node_type="spec"`` for
+  whole-specification templates, and accepts an ``Eidos`` as ``spec_json``.
+
+0.12.2
+------
+
+* Regenerated from the EIDOS v0.12 schemas, which add ``"wave"`` to the gridded
+  layer's particle mesh ``shape``.
+
 0.12.1
 ------
 

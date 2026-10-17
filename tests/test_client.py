@@ -238,6 +238,68 @@ def test_list_templates_bare_array(conn):
     assert templates[0].node_type == "world"
 
 
+def _template_body(node_type, spec_json):
+    return {
+        "id": "t2",
+        "name": "tmpl",
+        "description": "",
+        "category": "custom",
+        "node_type": node_type,
+        "icon": None,
+        "scope": "user",
+        "account_id": None,
+        "created_by_user_id": "u1",
+        "spec_json": spec_json,
+        "created_at": "2026-07-04T00:00:00Z",
+        "updated_at": "2026-07-04T00:00:00Z",
+    }
+
+
+@responses.activate
+def test_create_spec_template_from_eidos(conn):
+    import json as _json
+
+    eidos = Eidos(
+        id="s1",
+        name="demo",
+        root=Document(id="root", content="hello"),
+        parameters=[
+            {
+                "key": "title",
+                "label": "Title",
+                "kind": "text",
+                "targets": ["/root/content"],
+            }
+        ],
+        **{"x-meta": {"owner": None}},
+    )
+    responses.post(
+        f"{SERVICE}/templates",
+        json=_template_body("spec", eidos.spec()),
+        status=201,
+    )
+    template = conn.create_template(name="tmpl", node_type="spec", spec_json=eidos)
+    payload = _json.loads(responses.calls[0].request.body)
+    assert payload == {"name": "tmpl", "node_type": "spec", "spec_json": eidos.spec()}
+    assert payload["spec_json"]["parameters"][0]["key"] == "title"
+    assert payload["spec_json"]["x-meta"] == {"owner": None}
+    assert template.node_type == "spec"
+
+
+@responses.activate
+def test_create_spec_template_from_dict(conn):
+    import json as _json
+
+    spec_json = {"id": "s1", "name": "demo", "x-meta": 1}
+    responses.post(
+        f"{SERVICE}/templates", json=_template_body("spec", spec_json), status=201
+    )
+    conn.create_template(name="tmpl", node_type="spec", spec_json=spec_json)
+    payload = _json.loads(responses.calls[0].request.body)
+    assert payload["node_type"] == "spec"
+    assert payload["spec_json"] == spec_json
+
+
 @responses.activate
 def test_archive_template(conn):
     responses.post(f"{SERVICE}/templates/t1/archive", status=204)

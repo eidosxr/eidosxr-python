@@ -5,13 +5,17 @@ import sys
 import time
 import tempfile
 import webbrowser
+from typing import get_args
 import jinja2
 from jsonpatch import JsonPatch
+from pydantic import ConfigDict, ValidationError, model_serializer, model_validator
+from pydantic_core import PydanticCustomError
+from pydantic_core.core_schema import ErrorType
 
 from .root import EidosSpecification
 from .data import EidosData
 from .vegaspec import TopLevelSpec
-from .exceptions import EidosError
+from .exceptions import EidosError, EidosSpecError
 from .. import version
 from .._optional import import_optional
 
@@ -32,10 +36,101 @@ j2_loader = jinja2.FileSystemLoader(TEMPLATES_PATH)
 j2_env = jinja2.Environment(loader=j2_loader, trim_blocks=True)
 
 
+_ERROR_TYPES = set(get_args(ErrorType))
+
+
+def _line_error(err):
+    """Turn a reported validation error back into one that can be raised."""
+    if err["type"] in _ERROR_TYPES:
+        return {k: err[k] for k in ("type", "loc", "input", "ctx") if k in err}
+    # A custom error type (PydanticCustomError): keep its formatted message.
+    return {
+        "type": PydanticCustomError(err["type"], err["msg"]),
+        "loc": err["loc"],
+        "input": err["input"],
+    }
+
+
 class Eidos(EidosSpecification):
-    """Eidos base class. This is the EIDOS base specification."""
+    """Eidos base class. This is the EIDOS base specification.
+
+    Top-level keys starting with ``x-`` are extension metadata: they are kept as
+    given (any JSON value) and written back out on dump. Any other unknown
+    top-level key is rejected.
+    """
+
+    # The root schema allows ^x- keys alongside its properties (patternProperties
+    # with additionalProperties false). datamodel-codegen cannot express that, so
+    # the generated EidosSpecification forbids all extra keys; this hand-written
+    # subclass allows extras and rejects the ones that are not x- keys.
+    model_config = ConfigDict(extra="allow")
 
     _checkpoint = None
+
+    @model_validator(mode="wrap")
+    @classmethod
+    def _only_extension_keys(cls, data, handler):
+        # One extra_forbidden error per non-x- unknown key, located at the key,
+        # reported together with any field errors, as extra="forbid" did.
+        unknown = []
+        if isinstance(data, dict):
+            unknown = [
+                {"type": "extra_forbidden", "loc": (k,), "input": v}
+                for k, v in data.items()
+                if k not in cls.model_fields and not k.startswith("x-")
+            ]
+        try:
+            model = handler(data)
+        except ValidationError as e:
+            # model_validate runs Eidos.__init__ inside the handler, which
+            # validates (and reports the unknown keys) again: don't repeat them.
+            reported = {
+                tuple(err["loc"])
+                for err in e.errors()
+                if err["type"] == "extra_forbidden"
+            }
+            unknown = [u for u in unknown if u["loc"] not in reported]
+            if not unknown:
+                raise
+            errors = [_line_error(err) for err in e.errors()] + unknown
+            raise ValidationError.from_exception_data(cls.__name__, errors) from None
+        if unknown:
+            raise ValidationError.from_exception_data(cls.__name__, unknown)
+        return model
+
+    @model_serializer(mode="wrap")
+    def _keep_null_extension_keys(self, handler, info):
+        # exclude_none (which model_dump always sets) would drop an x- key whose
+        # value is null; it is extension data, not an unset field, so keep it.
+        data = handler(self)
+        if info.exclude_none:
+            for key, value in (self.__pydantic_extra__ or {}).items():
+                if (
+                    value is None
+                    and (info.include is None or key in info.include)
+                    and not (info.exclude and key in info.exclude)
+                ):
+                    data[key] = None
+        return data
+
+    def __setattr__(self, name, value):
+        # With extra="allow" pydantic stores an unknown attribute before the
+        # validators run, so reject a non-x- name here, as extra="forbid" did.
+        if not (name.startswith(("_", "x-")) or name in type(self).model_fields):
+            raise EidosSpecError(
+                ValidationError.from_exception_data(
+                    type(self).__name__,
+                    [
+                        {
+                            "type": "no_such_attribute",
+                            "loc": (name,),
+                            "input": value,
+                            "ctx": {"attribute": name},
+                        }
+                    ],
+                )
+            )
+        super().__setattr__(name, value)
 
     @classmethod
     def from_dict(cls, spec: dict):
@@ -64,6 +159,10 @@ class Eidos(EidosSpecification):
     def model_dump(self, **kwargs):
         """Dump model as dictionary."""
         return super().model_dump(**{**kwargs, "exclude_none": True})
+
+    def model_dump_json(self, **kwargs):
+        """Dump model as JSON, leaving out unset (None) fields as model_dump does."""
+        return super().model_dump_json(**{**kwargs, "exclude_none": True})
 
     def diff(self):
         """Get diff since last checkpoint and reset checkpoint"""
