@@ -43,8 +43,27 @@ def test_grid_responsive_round_trips() -> None:
     ]
 
 
+def test_grid_layout_stays_a_list() -> None:
+    # The schema moved gridLayout to $defs, which datamodel-codegen emits as a
+    # RootModel; gen_models.sh keeps the fields typed as lists, so 0.12.3 code
+    # that indexes, measures or appends to gridLayout keeps working.
+    layout = [{"x": 0, "y": 0, "w": 1, "h": 1}, {"x": 1, "y": 0, "w": 1, "h": 1}]
+    grid = Grid(
+        id="g",
+        gridSize=GridSize(columns=2, rows=1),
+        children=CHILDREN,
+        gridLayout=layout,
+        responsive=[{"maxWidth": 600, "gridLayout": layout}],
+    )
+    for value in (grid.gridLayout, grid.responsive[0].gridLayout):
+        assert len(value) == 2
+        assert value[1].x == 1
+    grid.gridLayout.append({"x": 0, "y": 0, "w": 2, "h": 1})
+    assert len(grid.gridLayout) == 3
+
+
 @pytest.mark.parametrize(
-    "entry", [{"maxWidth": 0}, {}, {"maxWidth": 600, "columns": 1}]
+    "entry", [{"maxWidth": 0}, {"maxWidth": -1}, {}, {"maxWidth": 600, "columns": 1}]
 )
 def test_grid_responsive_rejects_invalid_entries(entry: dict) -> None:
     with pytest.raises(ValueError):
@@ -53,6 +72,16 @@ def test_grid_responsive_rejects_invalid_entries(entry: dict) -> None:
             gridSize=GridSize(columns=1, rows=1),
             children=CHILDREN,
             responsive=[entry],
+        )
+
+
+def test_grid_responsive_rejects_an_empty_list() -> None:
+    with pytest.raises(ValueError):
+        Grid(
+            id="g",
+            gridSize=GridSize(columns=1, rows=1),
+            children=CHILDREN,
+            responsive=[],
         )
 
 

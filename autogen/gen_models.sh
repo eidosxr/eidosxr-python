@@ -116,6 +116,12 @@ perl -p -i -e "s|^Nested\.model_rebuild\(\)$|# model_rebuild() called in panel.p
 # Defer Grid.model_rebuild() - Grid references World which references panel.EidosPanel
 perl -p -i -e "s|^Grid\.model_rebuild\(\)$|# model_rebuild() called in panel.py after EidosPanel is defined to break circular import|g" "$GRID_PY"
 
+# gridLayout lives in the schema's $defs (shared by Grid and its responsive
+# entries), which datamodel-codegen emits as a GridLayout RootModel. Keep the
+# fields typed as plain lists, as before 0.12.4, so grid.gridLayout stays
+# indexable and gets EidosModel's list proxy (parent change tracking).
+perl -p -i -e "s|^(\s+gridLayout: )Optional\[GridLayout\]|\1Optional[List[GridLayoutItem]]|g" "$GRID_PY"
+
 # Defer Menu.model_rebuild() - Menu references World which references panel.EidosPanel
 perl -p -i -e "s|^Menu\.model_rebuild\(\)$|# model_rebuild() called in panel.py after EidosPanel is defined to break circular import|g" "$MENU_PY"
 
