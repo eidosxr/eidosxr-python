@@ -121,6 +121,19 @@ perl -p -i -e "s|^Grid\.model_rebuild\(\)$|# model_rebuild() called in panel.py 
 # fields typed as plain lists, as before 0.12.4, so grid.gridLayout stays
 # indexable and gets EidosModel's list proxy (parent change tracking).
 perl -p -i -e "s|^(\s+gridLayout: )Optional\[GridLayout\]|\1Optional[List[GridLayoutItem]]|g" "$GRID_PY"
+if grep -q "Optional\[GridLayout\]" "$GRID_PY" || ! grep -q "gridLayout: Optional\[List\[GridLayoutItem\]\]" "$GRID_PY"; then
+  echo "gridLayout list rewrite did not apply to $GRID_PY; update gen_models.sh" >&2
+  exit 1
+fi
+
+# Leave maxPixelRatio unset rather than baking in the schema default (2): the
+# renderer applies the default, so specs only carry the field when it is set
+# and stay valid for renderers that predate it.
+perl -p -i -e "s|^(\s+maxPixelRatio: Optional\[PositiveFloat\]) = 2$|\1 = None|g" "$WORLD_PY"
+if ! grep -q "maxPixelRatio: Optional\[PositiveFloat\] = None" "$WORLD_PY"; then
+  echo "maxPixelRatio default rewrite did not apply to $WORLD_PY; update gen_models.sh" >&2
+  exit 1
+fi
 
 # Defer Menu.model_rebuild() - Menu references World which references panel.EidosPanel
 perl -p -i -e "s|^Menu\.model_rebuild\(\)$|# model_rebuild() called in panel.py after EidosPanel is defined to break circular import|g" "$MENU_PY"

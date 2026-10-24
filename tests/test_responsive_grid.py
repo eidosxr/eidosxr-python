@@ -98,5 +98,10 @@ def test_menu_position_has_no_default() -> None:
     assert Menu(id="m", menuLayout=[], children=[], position="left").position == "left"
 
 
-def test_world_max_pixel_ratio_defaults_to_two() -> None:
-    assert Nested(id="w", children=[]).maxPixelRatio == 2
+def test_world_max_pixel_ratio_is_unset_by_default() -> None:
+    # The renderer applies the default (2); leaving it unset keeps specs valid
+    # for renderers that predate the field.
+    world = Nested(id="w", children=[])
+    assert world.maxPixelRatio is None
+    assert "maxPixelRatio" not in json.loads(world.model_dump_json(exclude_none=True))
+    assert Nested(id="w", children=[], maxPixelRatio=3).maxPixelRatio == 3

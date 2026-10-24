@@ -18,7 +18,8 @@ Responsive layout (EID-194, EID-195). Regenerated from the EIDOS v0.12 schemas.
   and no longer defaults to ``'top'``: unset still means top, and specs no
   longer carry the field unless you set it.
 * ``World`` (and nested worlds) accept ``maxPixelRatio``, the upper limit on the
-  map canvas resolution (default 2).
+  map canvas resolution. It is unset by default (the renderer then uses 2), so
+  specs only carry it when you set it.
 
 0.12.3
 ------
