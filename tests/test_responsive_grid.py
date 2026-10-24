@@ -1,10 +1,19 @@
 """Grid `responsive` overrides, menu `position` and world `maxPixelRatio` (EIDOS v0.12)."""
 
 import json
+import warnings
 
 import pytest
 
-from eidosxr import Grid, GridSize, Menu, MenuLayoutItem, Nested, ResponsiveItem
+from eidosxr import (
+    Grid,
+    GridLayoutItem,
+    GridSize,
+    Menu,
+    MenuLayoutItem,
+    Nested,
+    ResponsiveItem,
+)
 
 CHILDREN = [
     Nested(id="a", children=[]),
@@ -58,8 +67,12 @@ def test_grid_layout_stays_a_list() -> None:
     for value in (grid.gridLayout, grid.responsive[0].gridLayout):
         assert len(value) == 2
         assert value[1].x == 1
-    grid.gridLayout.append({"x": 0, "y": 0, "w": 2, "h": 1})
+    grid.gridLayout.append(GridLayoutItem(x=0, y=0, w=2, h=1))
     assert len(grid.gridLayout) == 3
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")  # no pydantic serialiser fallback
+        spec = json.loads(grid.model_dump_json(exclude_none=True))
+    assert spec["gridLayout"][2] == {"x": 0, "y": 0, "w": 2, "h": 1}
 
 
 @pytest.mark.parametrize(
