@@ -1,6 +1,26 @@
 ChangeLog
 =========
 
+0.12.4
+------
+
+Responsive layout (EID-194, EID-195). Regenerated from the EIDOS v0.12 schemas.
+
+* ``Grid`` accepts ``responsive``: a list of ``ResponsiveItem`` (``maxWidth``,
+  and optional ``gridSize`` and ``gridLayout``) giving the grid other layouts
+  at narrower widths.
+* ``Grid.gridLayout`` (and ``ResponsiveItem.gridLayout``) stay plain lists of
+  ``GridLayoutItem``. The schema now shares ``gridLayout`` through ``$defs``,
+  which the generator turns into a ``GridLayout`` root model; ``gen_models.sh``
+  keeps the fields typed as lists so existing code that indexes or appends to
+  them keeps working.
+* ``Menu.position`` (top, left, bottom, right) is now honoured by the renderer
+  and no longer defaults to ``'top'``: unset still means top, and specs no
+  longer carry the field unless you set it.
+* ``World`` (and nested worlds) accept ``maxPixelRatio``, the upper limit on the
+  map canvas resolution. It is unset by default (the renderer then uses 2), so
+  specs only carry it when you set it.
+
 0.12.3
 ------
 
